@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum Priority { low, medium, high }
 
 enum ToDoFilter { alle, offen, erledigt, ueberfaellig }
@@ -5,6 +7,7 @@ enum ToDoFilter { alle, offen, erledigt, ueberfaellig }
 enum ToDoSort { titel, prioritaet, erstellungsdatum, faelligkeitsdatum }
 
 class ObjTodo {
+  Key key = UniqueKey();
   int id;
   String title;
   String description;
@@ -12,6 +15,8 @@ class ObjTodo {
   DateTime createdAt;
   DateTime dueDate;
   Priority priority;
+  bool isHeader = false;
+  int headerId;
 
   ObjTodo({
     required this.id,
@@ -21,6 +26,8 @@ class ObjTodo {
     required this.createdAt,
     required this.dueDate,
     required this.priority,
+    required this.isHeader,
+    required this.headerId,
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +41,8 @@ class ObjTodo {
       'createdAt': createdAt.toIso8601String(),
       'dueDate': dueDate.toIso8601String(),
       'priority': priority.index, // speichere den Index (0, 1, 2)
+      'isHeader': isHeader,
+      'headerId': headerId,
     };
   }
 
@@ -58,6 +67,12 @@ class ObjTodo {
       if (map['priority'] == null) {
         throw ArgumentError('priority darf nicht null sein');
       }
+      if (map['isHeader'] == null) {
+        throw ArgumentError('isHeader darf nicht null sein');
+      }
+      if (map['headerId'] == null) {
+        throw ArgumentError('headerId darf nicht null sein');
+      }
 
       return ObjTodo(
         id: map['id'] as int,
@@ -69,6 +84,8 @@ class ObjTodo {
         createdAt: DateTime.parse(map['createdAt'] as String),
         dueDate: DateTime.parse(map['dueDate'] as String),
         priority: Priority.values[map['priority'] as int],
+        isHeader: map['isHeader'] != null ? (map['isHeader'] as bool) : false,
+        headerId: map['headerId'] != null ? map['headerId'] as int : 0,
       );
     } catch (e) {
       throw FormatException('Fehler beim Parsen des Todo-Objekts: $e');
@@ -87,6 +104,8 @@ class ObjHeader extends ObjTodo {
     required super.createdAt,
     required super.dueDate,
     required super.priority,
+    required super.isHeader,
+    required super.headerId,
     required this.subTopics,
   });
 
@@ -122,6 +141,12 @@ class ObjHeader extends ObjTodo {
       if (map['priority'] == null) {
         throw ArgumentError('priority darf nicht null sein');
       }
+      if (map['isHeader'] == null) {
+        throw ArgumentError('isHeader darf nicht null sein');
+      }
+      if (map['headerId'] == null) {
+        throw ArgumentError('headerId darf nicht null sein');
+      }
 
       // SubTopics parsen
       List<ObjTodo> parsedSubTopics = [];
@@ -144,6 +169,8 @@ class ObjHeader extends ObjTodo {
         createdAt: DateTime.parse(map['createdAt'] as String),
         dueDate: DateTime.parse(map['dueDate'] as String),
         priority: Priority.values[map['priority'] as int],
+        isHeader: map['isHeader'] != null ? (map['isHeader'] as bool) : false,
+        headerId: map['headerId'] != null ? map['headerId'] as int : 0,
         subTopics: parsedSubTopics,
       );
     } catch (e) {

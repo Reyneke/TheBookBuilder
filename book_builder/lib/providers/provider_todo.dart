@@ -32,6 +32,10 @@ class ProviderToDo extends ChangeNotifier {
     notifyListeners();
   }
 
+  int getItemPosition(List<ObjTodo> index, ObjTodo oldItem) {
+    return index.indexWhere((element) => element.id == oldItem.id);
+  }
+
   void clearList() {
     _todoList.clear();
     notifyListeners();
@@ -43,8 +47,12 @@ class ProviderToDo extends ChangeNotifier {
   }
 
   void removeHeader(ObjHeader oldHeader) {
-    _headerList.remove(oldHeader);
-    notifyListeners();
+    final position = getItemPosition(_headerList, oldHeader);
+    if (position >= 0) {
+      oldHeader.subTopics.clear();
+      _headerList.removeAt(position);
+      notifyListeners();
+    }
   }
 
   void addItemToHeader(int index, ObjTodo newItem) {
@@ -55,8 +63,14 @@ class ProviderToDo extends ChangeNotifier {
 
   void removeItemFromHeader(int index, ObjTodo oldItem) {
     //_todoList.remove(oldItem);
-    _headerList.elementAt(index).subTopics.remove(oldItem);
-    notifyListeners();
+    final position = getItemPosition(
+      _headerList.elementAt(index).subTopics,
+      oldItem,
+    );
+    if (position >= 0) {
+      _headerList.elementAt(index).subTopics.removeAt(position);
+      notifyListeners();
+    }
   }
 
   void clearHeaderList() {
@@ -70,27 +84,54 @@ class ProviderToDo extends ChangeNotifier {
   }
 
   void updateCompletion(int id, bool newState) {
-    _todoList[id].isCompleted = newState;
+    //_todoList[id].isCompleted = newState;
+    _headerList[id].isCompleted = newState;
+    notifyListeners();
+  }
+
+  void updateCompletionItem(int headerId, int id, bool newState) {
+    //_todoList[id].isCompleted = newState;
+    _headerList[headerId].subTopics[id].isCompleted = newState;
     notifyListeners();
   }
 
   void updateTitle(int id, String newTitle) {
-    _todoList[id].title = newTitle;
+    _headerList[id].title = newTitle;
+    notifyListeners();
+  }
+
+  void updateTitleItem(int headerId, int id, String newTitle) {
+    _headerList[headerId].subTopics[id].title = newTitle;
     notifyListeners();
   }
 
   void updateDescription(int id, String newDesc) {
-    _todoList[id].description = newDesc;
+    _headerList[id].description = newDesc;
+    notifyListeners();
+  }
+
+  void updateDescriptionItem(int headerId, int id, String newDesc) {
+    _headerList[headerId].subTopics[id].description = newDesc;
     notifyListeners();
   }
 
   void updatePriority(int id, Priority newPriority) {
-    _todoList[id].priority = newPriority;
+    _headerList[id].priority = newPriority;
+    notifyListeners();
+  }
+
+  void updatePriorityItem(int headerId, int id, Priority newPriority) {
+    _headerList[headerId].subTopics[id].priority = newPriority;
     notifyListeners();
   }
 
   void updateCompletionDate(int id, DateTime newDate) {
-    _todoList[id].dueDate = newDate;
+    _headerList[id].dueDate = newDate;
+    notifyListeners();
+  }
+
+  void updateCompletionDateItem(int headerId, int id, DateTime newDate) {
+    _headerList[headerId].subTopics[id].dueDate = newDate;
     notifyListeners();
   }
 

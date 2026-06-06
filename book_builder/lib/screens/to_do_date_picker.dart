@@ -4,8 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class ToDoDatePicker extends StatefulWidget {
-  const ToDoDatePicker({super.key, required this.index});
+  const ToDoDatePicker({
+    super.key,
+    required this.index,
+    required this.isHeader,
+    required this.indexHeader,
+  });
   final int index;
+  final bool isHeader;
+  final int indexHeader;
 
   @override
   State<ToDoDatePicker> createState() => _ToDoDatePickerState();
@@ -29,8 +36,15 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
 
   String getParsedDateString(DateTime selectedDate, bool updateDueTime) {
     if (updateDueTime) {
-      context.read<ProviderToDo>().todoList[widget.index].dueDate =
-          selectedDate;
+      widget.isHeader
+          ? context.read<ProviderToDo>().headerList[widget.index].dueDate =
+                selectedDate
+          : context
+                    .read<ProviderToDo>()
+                    .headerList[widget.indexHeader]
+                    .subTopics[widget.index]
+                    .dueDate =
+                selectedDate;
       context.read<ProviderService>().saveToDoList(context);
     }
 
@@ -46,13 +60,22 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
           builder: (context, dateProvider, child) {
             return Text(
               selectedDate == null
-                  ? getParsedDateString(
-                      context
-                          .read<ProviderToDo>()
-                          .todoList[widget.index]
-                          .dueDate,
-                      false,
-                    ) /*'Noch kein Datum ausgewählt'*/
+                  ? widget.isHeader
+                        ? getParsedDateString(
+                            context
+                                .read<ProviderToDo>()
+                                .headerList[widget.index]
+                                .dueDate,
+                            false,
+                          )
+                        : getParsedDateString(
+                            context
+                                .read<ProviderToDo>()
+                                .headerList[widget.indexHeader]
+                                .subTopics[widget.index]
+                                .dueDate,
+                            false,
+                          ) /*'Noch kein Datum ausgewählt'*/
                   : getParsedDateString(selectedDate!, true),
             );
           },

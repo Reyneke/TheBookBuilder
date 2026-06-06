@@ -101,6 +101,8 @@ class _MainAppState extends State<MainApp> {
                   createdAt: DateTime.now(),
                   dueDate: DateTime.now(),
                   priority: Priority.low,
+                  isHeader: false,
+                  headerId: 0,
                 );
 
                 final newItem2 = ObjHeader(
@@ -111,7 +113,9 @@ class _MainAppState extends State<MainApp> {
                   createdAt: DateTime.now(),
                   dueDate: DateTime.now(),
                   priority: Priority.low,
+                  isHeader: true,
                   subTopics: [],
+                  headerId: 0,
                 );
 
                 context.read<ProviderToDo>().addItem(newItem);

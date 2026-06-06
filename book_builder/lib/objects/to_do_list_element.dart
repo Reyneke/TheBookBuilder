@@ -12,107 +12,64 @@ class ToDoListElement extends StatelessWidget {
     required this.index,
   });
 
-  final /*ObjTodo*/ dynamic listItem;
+  final ObjTodo listItem;
   final int index;
   final String imageNotDone = "assets/images/echo_working.png";
   final String imageDone = "assets/images/echo_done.png";
 
   @override
   Widget build(BuildContext context) {
-    return (listItem.runtimeType == ObjHeader)
-        ? Column(
-            children: [
-              ListTile(
-                leading: (listItem.runtimeType == ObjHeader)
-                    ? IconButton(
-                        onPressed: () {
-                          context.read<ProviderToDo>().addItemToHeader(
-                            listItem.id,
-                            ObjTodo(
-                              id: context
-                                  .read<ProviderToDo>()
-                                  .headerList[listItem.id]
-                                  .subTopics
-                                  .length,
-                              description: "Leer",
-                              title: "Leer",
-                              isCompleted: false,
-                              createdAt: DateTime.now(),
-                              dueDate: DateTime.now(),
-                              priority: Priority.low,
-                            ),
-                          );
-                        },
-                        icon: Icon(Icons.add),
-                      )
-                    : listItem.isCompleted
-                    ? Image.asset(imageDone)
-                    : Image.asset(imageNotDone),
-                title: Text(listItem.title),
-                subtitle: ToDoPriorityIndicator(priority: listItem.priority),
-                trailing: Consumer<ProviderToDo>(
-                  builder: (context, completed, child) {
-                    return Checkbox(
-                      onChanged: (result) {
-                        context.read<ProviderToDo>().updateCompletion(
-                          index,
-                          (result ?? false),
-                        );
-                        context.read<ProviderService>().saveToDoList(context);
-                      },
-                      value: listItem.isCompleted,
-                    );
-                  },
-                ),
-              ),
-              /*{
-                if (listItem.subTopics.length > 0) {
-                for (var subItem in listItem.subTopics)}
-              }*/
-            ],
-          )
-        : ListTile(
-            leading: (listItem.runtimeType == ObjHeader)
-                ? IconButton(
-                    onPressed: () {
-                      context.read<ProviderToDo>().addItemToHeader(
-                        listItem.id,
-                        ObjTodo(
-                          id: context
-                              .read<ProviderToDo>()
-                              .headerList[listItem.id]
-                              .subTopics
-                              .length,
-                          description: "Leer",
-                          title: "Leer",
-                          isCompleted: false,
-                          createdAt: DateTime.now(),
-                          dueDate: DateTime.now(),
-                          priority: Priority.low,
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.add),
-                  )
-                : listItem.isCompleted
-                ? Image.asset(imageDone)
-                : Image.asset(imageNotDone),
-            title: Text(listItem.title),
-            subtitle: ToDoPriorityIndicator(priority: listItem.priority),
-            trailing: Consumer<ProviderToDo>(
-              builder: (context, completed, child) {
-                return Checkbox(
-                  onChanged: (result) {
-                    context.read<ProviderToDo>().updateCompletion(
+    final isHeader = (listItem.runtimeType == ObjHeader) ? true : false;
+    return ListTile(
+      leading: isHeader
+          ? IconButton(
+              onPressed: () {
+                context.read<ProviderToDo>().addItemToHeader(
+                  listItem.id,
+                  ObjTodo(
+                    id: context
+                        .read<ProviderToDo>()
+                        .headerList[listItem.id]
+                        .subTopics
+                        .length,
+                    description: "Leer",
+                    title: "Leer",
+                    isCompleted: false,
+                    createdAt: DateTime.now(),
+                    dueDate: DateTime.now(),
+                    priority: Priority.low,
+                    isHeader: false,
+                    headerId: listItem.id,
+                  ),
+                );
+              },
+              icon: Icon(Icons.add),
+            )
+          : listItem.isCompleted
+          ? Image.asset(imageDone)
+          : Image.asset(imageNotDone),
+      title: Text(listItem.title),
+      subtitle: ToDoPriorityIndicator(priority: listItem.priority),
+      trailing: Consumer<ProviderToDo>(
+        builder: (context, completed, child) {
+          return Checkbox(
+            onChanged: (result) {
+              isHeader
+                  ? context.read<ProviderToDo>().updateCompletion(
+                      index,
+                      (result ?? false),
+                    )
+                  : context.read<ProviderToDo>().updateCompletionItem(
+                      listItem.headerId,
                       index,
                       (result ?? false),
                     );
-                    context.read<ProviderService>().saveToDoList(context);
-                  },
-                  value: listItem.isCompleted,
-                );
-              },
-            ),
+              context.read<ProviderService>().saveToDoList(context);
+            },
+            value: listItem.isCompleted,
           );
+        },
+      ),
+    );
   }
 }

@@ -13,6 +13,8 @@ class AppUserData extends StatelessWidget {
     required this.serviceController,
     required this.descriptionController,
     required this.index,
+    required this.isHeader,
+    required this.headerIndex,
   });
 
   final GlobalKey<FormState> formKey;
@@ -20,6 +22,8 @@ class AppUserData extends StatelessWidget {
   final ProviderService serviceController;
   final TextEditingController descriptionController;
   final int index;
+  final bool isHeader;
+  final int headerIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +45,16 @@ class AppUserData extends StatelessWidget {
             trailing: IconButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
-                  context.read<ProviderToDo>().updateTitle(
-                    index,
-                    titelController.text.trim(),
-                  );
+                  isHeader
+                      ? context.read<ProviderToDo>().updateTitle(
+                          index,
+                          titelController.text.trim(),
+                        )
+                      : context.read<ProviderToDo>().updateTitleItem(
+                          headerIndex,
+                          index,
+                          titelController.text.trim(),
+                        );
                   serviceController.saveToDoList(context);
                 }
               },
@@ -62,10 +72,16 @@ class AppUserData extends StatelessWidget {
             ),
             trailing: IconButton(
               onPressed: () {
-                context.read<ProviderToDo>().updateDescription(
-                  index,
-                  descriptionController.text.trim(),
-                );
+                isHeader
+                    ? context.read<ProviderToDo>().updateDescription(
+                        index,
+                        descriptionController.text.trim(),
+                      )
+                    : context.read<ProviderToDo>().updateDescriptionItem(
+                        headerIndex,
+                        index,
+                        descriptionController.text.trim(),
+                      );
                 serviceController.saveToDoList(context);
               },
               icon: Icon(Icons.check),
@@ -84,22 +100,26 @@ class AppUserData extends StatelessWidget {
                   ),
               ],
               onSelected: (item) {
-                context.read<ProviderToDo>().updatePriority(
-                  index,
-                  (item!),
-                );
+                isHeader
+                    ? context.read<ProviderToDo>().updatePriority(
+                        index,
+                        (item!),
+                      )
+                    : context.read<ProviderToDo>().updatePriorityItem(
+                        headerIndex,
+                        index,
+                        (item!),
+                      );
                 serviceController.saveToDoList(context);
               },
             ),
           ),
           ListTile(
             leading: Text("Fällig am"),
-            title: /*DatePickerDialog(
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(DateTime.now().year + 4),
-                      
-                    ),*/ ToDoDatePicker(
+            title: ToDoDatePicker(
               index: index,
+              isHeader: isHeader,
+              indexHeader: headerIndex,
             ),
           ),
         ],

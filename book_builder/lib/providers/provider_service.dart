@@ -17,11 +17,11 @@ class ProviderService extends ChangeNotifier {
 
   void saveToDoList(BuildContext context) async {
     final todoManager = context.read<ProviderToDo>();
-    if (todoManager.todoList.isNotEmpty) {
+    if (todoManager.headerList.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
 
       //Save all keys
-      for (var toDoItem in todoManager.todoList) {
+      for (var toDoItem in todoManager.headerList) {
         final String key =
             toDoItem.id.toString() +
             //toDoItem.title +
@@ -42,7 +42,7 @@ class ProviderService extends ChangeNotifier {
   void removeFromList(BuildContext context, ObjTodo deletedObject) async {
     final todoManager = context.read<ProviderToDo>();
 
-    if (todoManager.todoList.isNotEmpty) {
+    if (todoManager.headerList.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
 
       //for (var toDoItem in todoManager.todoList) {
@@ -65,7 +65,9 @@ class ProviderService extends ChangeNotifier {
   //Nur Aufruf beim AppStart
   void loadToDoList(BuildContext context) async {
     final todoManager = context.read<ProviderToDo>();
-    if (todoManager.todoList.isEmpty) {
+    //resetAllSettings();
+
+    if (todoManager.headerList.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
       final keyStrings = (prefs.getString(_serviceKeys) ?? "");
       final subKeysString = keyStrings.split(" ");
@@ -73,8 +75,9 @@ class ProviderService extends ChangeNotifier {
         final toDoString = (prefs.getString(key));
         if (toDoString != null) {
           final toDoMap = jsonDecode(toDoString);
-          final todoListItem = ObjTodo.fromMapWithDefaults(toDoMap);
-          todoManager.addItem(todoListItem);
+          final todoListItem = ObjHeader.fromMapWithDefaults(toDoMap);
+          todoManager.addHeader(todoListItem);
+          // .addItem(todoListItem);
           _keyRing.add(key);
         }
       }

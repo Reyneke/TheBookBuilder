@@ -15,10 +15,24 @@ class ScreenTodo extends StatefulWidget {
 }
 
 class _ScreenTodoState extends State<ScreenTodo> {
+  List<ObjTodo> getCondensedList() {
+    List<ObjTodo> condensedList = [];
+
+    for (var header in context.read<ProviderToDo>().headerList) {
+      condensedList.add(header);
+      for (var topic in header.subTopics) {
+        condensedList.add(topic);
+      }
+    }
+
+    return condensedList;
+  }
+
   @override
   Widget build(BuildContext context) {
     final todoManager = context.watch<ProviderToDo>();
-    final filteredList = todoManager.todoList.where((element) {
+    final filteredList = getCondensedList().where((element) {
+      //todoManager.todoList.where((element) {
       return getFilteredList(todoManager, element);
     }).toList();
 
@@ -26,20 +40,18 @@ class _ScreenTodoState extends State<ScreenTodo> {
       sortFilteredList(filteredList, todoManager);
     }
 
-    if ( /*filteredList.isEmpty*/ todoManager.headerList.isEmpty) {
+    if (filteredList.isEmpty) {
       return Center(
         child: Text('Keine ToDos verteilt.'),
       );
     }
 
     return ListView.builder(
-      itemCount: todoManager
-          .headerList
-          .length, //filteredList.length, //todoManager.todoList.length,
+      itemCount: filteredList.length, //todoManager.todoList.length,
       itemBuilder: (context, index) {
-        final listItem = todoManager.headerList[index]; //filteredList[index];
+        final listItem = filteredList[index];
         return Dismissible(
-          key: Key(index.toString()),
+          key: listItem.key,
           confirmDismiss: (direction) {
             return showDialog(
               context: context,
@@ -52,7 +64,22 @@ class _ScreenTodoState extends State<ScreenTodo> {
             //context.read<ProviderToDo>().removeItem(listItem);
             //context.read<ProviderService>().removeFromList(context, listItem);
 
-            context.read<ProviderToDo>().removeHeader(listItem);
+            setState(() {
+              filteredList.removeAt(index);
+            });
+
+            if (listItem is ObjHeader) {
+              context.read<ProviderToDo>().removeHeader(listItem);
+              context.read<ProviderService>().removeFromList(context, listItem);
+            } else {
+              context.read<ProviderToDo>().removeItemFromHeader(
+                listItem.headerId,
+                listItem,
+              );
+              context.read<ProviderService>().saveToDoList(context);
+            }
+
+            //context.read<ProviderService>().saveToDoList(context);
             //context.read<ProviderService>().removeFromList(context, listItem);
 
             // Then show a snackbar.
@@ -67,11 +94,11 @@ class _ScreenTodoState extends State<ScreenTodo> {
             elevation: 4,
             child: GestureDetector(
               onTap: () {
-                toDoBottomSheet(context, listItem, index);
+                toDoBottomSheet(context, listItem, listItem.id);
               },
               child: ToDoListElement(
                 listItem: listItem,
-                index: index,
+                index: listItem.id,
               ),
             ),
           ),
@@ -84,13 +111,15 @@ class _ScreenTodoState extends State<ScreenTodo> {
     filteredList.sort(
       (element, compareElement) {
         if (todoManager.sortingOption == ToDoSort.prioritaet) {
-          return element.priority.name.compareTo(
-            compareElement.priority.name,
+          return element.priority.name.toLowerCase().compareTo(
+            compareElement.priority.name.toLowerCase(),
           );
         }
 
         if (todoManager.sortingOption == ToDoSort.titel) {
-          return element.title.compareTo(compareElement.title);
+          return element.title.toLowerCase().compareTo(
+            compareElement.title.toLowerCase(),
+          );
         }
 
         if (todoManager.sortingOption == ToDoSort.faelligkeitsdatum) {
@@ -158,6 +187,8 @@ class _ScreenTodoState extends State<ScreenTodo> {
           serviceController: serviceController,
           descriptionController: descriptionController,
           index: index,
+          isHeader: listItem.isHeader,
+          headerIndex: listItem.headerId,
         );
       },
     );
