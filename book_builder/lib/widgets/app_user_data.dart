@@ -1,6 +1,6 @@
-import 'package:book_builder/objects/obj_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/providers/provider_todo.dart';
 import 'package:book_builder/screens/to_do_date_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -46,11 +46,11 @@ class AppUserData extends StatelessWidget {
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   isHeader
-                      ? context.read<ProviderToDo>().updateTitle(
+                      ? context.read<ProviderBookItems>().updateTitle(
                           index,
                           titelController.text.trim(),
                         )
-                      : context.read<ProviderToDo>().updateTitleItem(
+                      : context.read<ProviderBookItems>().updateTitleItem(
                           headerIndex,
                           index,
                           titelController.text.trim(),
@@ -73,11 +73,11 @@ class AppUserData extends StatelessWidget {
             trailing: IconButton(
               onPressed: () {
                 isHeader
-                    ? context.read<ProviderToDo>().updateDescription(
+                    ? context.read<ProviderBookItems>().updateDescription(
                         index,
                         descriptionController.text.trim(),
                       )
-                    : context.read<ProviderToDo>().updateDescriptionItem(
+                    : context.read<ProviderBookItems>().updateDescriptionItem(
                         headerIndex,
                         index,
                         descriptionController.text.trim(),
@@ -101,11 +101,11 @@ class AppUserData extends StatelessWidget {
               ],
               onSelected: (item) {
                 isHeader
-                    ? context.read<ProviderToDo>().updatePriority(
+                    ? context.read<ProviderBookItems>().updatePriority(
                         index,
                         (item!),
                       )
-                    : context.read<ProviderToDo>().updatePriorityItem(
+                    : context.read<ProviderBookItems>().updatePriorityItem(
                         headerIndex,
                         index,
                         (item!),

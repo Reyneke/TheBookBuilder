@@ -1,4 +1,4 @@
-import 'package:book_builder/objects/obj_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:flutter/material.dart';
 
 class ToDoPriorityIndicator extends StatelessWidget {

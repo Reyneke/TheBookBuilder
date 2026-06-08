@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import 'package:book_builder/objects/obj_todo.dart';
-import 'package:book_builder/providers/provider_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProviderService extends ChangeNotifier {
   static const _serviceKeys = 'serviceKeys';
@@ -15,8 +16,11 @@ class ProviderService extends ChangeNotifier {
   final List<String> _keyRing = [];
   List<String> get keyRing => _keyRing;
 
+  final _supabase = Supabase.instance.client;
+  SupabaseClient get supabase => _supabase;
+
   void saveToDoList(BuildContext context) async {
-    final todoManager = context.read<ProviderToDo>();
+    final todoManager = context.read<ProviderBookItems>();
     if (todoManager.headerList.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
 
@@ -39,8 +43,8 @@ class ProviderService extends ChangeNotifier {
     }
   }
 
-  void removeFromList(BuildContext context, ObjTodo deletedObject) async {
-    final todoManager = context.read<ProviderToDo>();
+  void removeFromList(BuildContext context, ObjBookItem deletedObject) async {
+    final todoManager = context.read<ProviderBookItems>();
 
     if (todoManager.headerList.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
@@ -64,7 +68,7 @@ class ProviderService extends ChangeNotifier {
 
   //Nur Aufruf beim AppStart
   void loadToDoList(BuildContext context) async {
-    final todoManager = context.read<ProviderToDo>();
+    final todoManager = context.read<ProviderBookItems>();
     //resetAllSettings();
 
     if (todoManager.headerList.isEmpty) {
@@ -75,7 +79,7 @@ class ProviderService extends ChangeNotifier {
         final toDoString = (prefs.getString(key));
         if (toDoString != null) {
           final toDoMap = jsonDecode(toDoString);
-          final todoListItem = ObjHeader.fromMapWithDefaults(toDoMap);
+          final todoListItem = ObjBookHeader.fromMapWithDefaults(toDoMap);
           todoManager.addHeader(todoListItem);
           // .addItem(todoListItem);
           _keyRing.add(key);

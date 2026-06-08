@@ -1,12 +1,12 @@
-import 'package:book_builder/objects/obj_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:flutter/material.dart';
 
-class ProviderToDo extends ChangeNotifier {
-  final List<ObjTodo> _todoList = [];
-  List<ObjTodo> get todoList => _todoList;
+class ProviderBookItems extends ChangeNotifier {
+  final List<ObjBookItem> _todoList = [];
+  List<ObjBookItem> get todoList => _todoList;
 
-  final List<ObjHeader> _headerList = [];
-  List<ObjHeader> get headerList => _headerList;
+  final List<ObjBookHeader> _headerList = [];
+  List<ObjBookHeader> get headerList => _headerList;
 
   final Set<ToDoFilter> _filters = <ToDoFilter>{ToDoFilter.alle};
   Set<ToDoFilter> get filters => _filters;
@@ -22,17 +22,17 @@ class ProviderToDo extends ChangeNotifier {
     return _todoList.length;
   }
 
-  void addItem(ObjTodo newItem) {
+  void addItem(ObjBookItem newItem) {
     _todoList.add(newItem);
     notifyListeners();
   }
 
-  void removeItem(ObjTodo oldItem) {
+  void removeItem(ObjBookItem oldItem) {
     _todoList.remove(oldItem);
     notifyListeners();
   }
 
-  int getItemPosition(List<ObjTodo> index, ObjTodo oldItem) {
+  int getItemPosition(List<ObjBookItem> index, ObjBookItem oldItem) {
     return index.indexWhere((element) => element.id == oldItem.id);
   }
 
@@ -41,12 +41,12 @@ class ProviderToDo extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addHeader(ObjHeader newHeader) {
+  void addHeader(ObjBookHeader newHeader) {
     _headerList.add(newHeader);
     notifyListeners();
   }
 
-  void removeHeader(ObjHeader oldHeader) {
+  void removeHeader(ObjBookHeader oldHeader) {
     final position = getItemPosition(_headerList, oldHeader);
     if (position >= 0) {
       oldHeader.subTopics.clear();
@@ -55,13 +55,13 @@ class ProviderToDo extends ChangeNotifier {
     }
   }
 
-  void addItemToHeader(int index, ObjTodo newItem) {
+  void addItemToHeader(int index, ObjBookItem newItem) {
     //_todoList.add(newItem);
     _headerList.elementAt(index).subTopics.add(newItem);
     notifyListeners();
   }
 
-  void removeItemFromHeader(int index, ObjTodo oldItem) {
+  void removeItemFromHeader(int index, ObjBookItem oldItem) {
     //_todoList.remove(oldItem);
     final position = getItemPosition(
       _headerList.elementAt(index).subTopics,

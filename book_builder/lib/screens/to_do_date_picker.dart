@@ -1,5 +1,5 @@
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/providers/provider_todo.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -37,10 +37,10 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
   String getParsedDateString(DateTime selectedDate, bool updateDueTime) {
     if (updateDueTime) {
       widget.isHeader
-          ? context.read<ProviderToDo>().headerList[widget.index].dueDate =
+          ? context.read<ProviderBookItems>().headerList[widget.index].dueDate =
                 selectedDate
           : context
-                    .read<ProviderToDo>()
+                    .read<ProviderBookItems>()
                     .headerList[widget.indexHeader]
                     .subTopics[widget.index]
                     .dueDate =
@@ -56,21 +56,21 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
-        Consumer<ProviderToDo>(
+        Consumer<ProviderBookItems>(
           builder: (context, dateProvider, child) {
             return Text(
               selectedDate == null
                   ? widget.isHeader
                         ? getParsedDateString(
                             context
-                                .read<ProviderToDo>()
+                                .read<ProviderBookItems>()
                                 .headerList[widget.index]
                                 .dueDate,
                             false,
                           )
                         : getParsedDateString(
                             context
-                                .read<ProviderToDo>()
+                                .read<ProviderBookItems>()
                                 .headerList[widget.indexHeader]
                                 .subTopics[widget.index]
                                 .dueDate,

@@ -6,7 +6,7 @@ enum ToDoFilter { alle, offen, erledigt, ueberfaellig }
 
 enum ToDoSort { titel, prioritaet, erstellungsdatum, faelligkeitsdatum }
 
-class ObjTodo {
+class ObjBookItem {
   Key key = UniqueKey();
   int id;
   String title;
@@ -17,8 +17,10 @@ class ObjTodo {
   Priority priority;
   bool isHeader = false;
   int headerId;
+  int bookDod = 4500;
+  int bookCounter = 0;
 
-  ObjTodo({
+  ObjBookItem({
     required this.id,
     required this.title,
     required this.description,
@@ -28,6 +30,8 @@ class ObjTodo {
     required this.priority,
     required this.isHeader,
     required this.headerId,
+    required this.bookDod,
+    required this.bookCounter,
   });
 
   Map<String, dynamic> toMap() {
@@ -43,10 +47,12 @@ class ObjTodo {
       'priority': priority.index, // speichere den Index (0, 1, 2)
       'isHeader': isHeader,
       'headerId': headerId,
+      'bookDod': bookDod,
+      'bookCounter': bookCounter,
     };
   }
 
-  factory ObjTodo.fromMapWithDefaults(Map<String, dynamic> map) {
+  factory ObjBookItem.fromMapWithDefaults(Map<String, dynamic> map) {
     try {
       // Pflichtfelder prüfen
       if (map['id'] == null) {
@@ -74,7 +80,7 @@ class ObjTodo {
         throw ArgumentError('headerId darf nicht null sein');
       }
 
-      return ObjTodo(
+      return ObjBookItem(
         id: map['id'] as int,
         title: map['title'] as String,
         description: map['description'] as String,
@@ -86,6 +92,8 @@ class ObjTodo {
         priority: Priority.values[map['priority'] as int],
         isHeader: map['isHeader'] != null ? (map['isHeader'] as bool) : false,
         headerId: map['headerId'] != null ? map['headerId'] as int : 0,
+        bookDod: map['bookDod'] as int,
+        bookCounter: map['bookCounter'] as int,
       );
     } catch (e) {
       throw FormatException('Fehler beim Parsen des Todo-Objekts: $e');
@@ -93,10 +101,10 @@ class ObjTodo {
   }
 }
 
-class ObjHeader extends ObjTodo {
-  List<ObjTodo> subTopics = [];
+class ObjBookHeader extends ObjBookItem {
+  List<ObjBookItem> subTopics = [];
 
-  ObjHeader({
+  ObjBookHeader({
     required super.id,
     required super.title,
     required super.description,
@@ -106,6 +114,8 @@ class ObjHeader extends ObjTodo {
     required super.priority,
     required super.isHeader,
     required super.headerId,
+    required super.bookDod,
+    required super.bookCounter,
     required this.subTopics,
   });
 
@@ -120,7 +130,7 @@ class ObjHeader extends ObjTodo {
     };
   }
 
-  factory ObjHeader.fromMapWithDefaults(Map<String, dynamic> map) {
+  factory ObjBookHeader.fromMapWithDefaults(Map<String, dynamic> map) {
     try {
       // Pflichtfelder prüfen (von ObjTodo)
       if (map['id'] == null) {
@@ -149,17 +159,17 @@ class ObjHeader extends ObjTodo {
       }
 
       // SubTopics parsen
-      List<ObjTodo> parsedSubTopics = [];
+      List<ObjBookItem> parsedSubTopics = [];
       if (map['subTopics'] != null) {
         parsedSubTopics = (map['subTopics'] as List)
             .map(
               (item) =>
-                  ObjTodo.fromMapWithDefaults(item as Map<String, dynamic>),
+                  ObjBookItem.fromMapWithDefaults(item as Map<String, dynamic>),
             )
             .toList();
       }
 
-      return ObjHeader(
+      return ObjBookHeader(
         id: map['id'] as int,
         title: map['title'] as String,
         description: map['description'] as String,
@@ -171,6 +181,8 @@ class ObjHeader extends ObjTodo {
         priority: Priority.values[map['priority'] as int],
         isHeader: map['isHeader'] != null ? (map['isHeader'] as bool) : false,
         headerId: map['headerId'] != null ? map['headerId'] as int : 0,
+        bookDod: map['bookDod'] as int,
+        bookCounter: map['bookCounter'] as int,
         subTopics: parsedSubTopics,
       );
     } catch (e) {

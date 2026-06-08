@@ -1,7 +1,8 @@
-import 'package:book_builder/objects/obj_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/providers/provider_todo.dart';
 import 'package:book_builder/providers/theme_notifier.dart';
+import 'package:book_builder/screens/login_screen.dart';
 import 'package:book_builder/screens/screen_todo.dart';
 import 'package:book_builder/theme/app_theme.dart';
 import 'package:book_builder/widgets/app_display_widget.dart';
@@ -49,10 +50,14 @@ class _MainAppState extends State<MainApp> {
               //ThemeSwitchWidget(),
             ),
 
-            body: Consumer<ProviderToDo>(
-              builder: (context, todoItems, child) {
-                //TODO: check if we really need this anymore ...
-                /*if (todoItems.todoList.isEmpty) {
+            body:
+                context.read<ProviderService>().supabase.auth.currentSession ==
+                    null
+                ? const LoginScreen()
+                : Consumer<ProviderBookItems>(
+                    builder: (context, todoItems, child) {
+                      //TODO: check if we really need this anymore ...
+                      /*if (todoItems.todoList.isEmpty) {
                   return Column(
                     children: [
                       Row(
@@ -71,30 +76,39 @@ class _MainAppState extends State<MainApp> {
                     ],
                   );
                 }*/
-                return Column(
-                  //mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Flexible(
-                      flex: 1,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        spacing: 16,
+                      return Column(
+                        //mainAxisSize: MainAxisSize.max,
                         children: [
-                          ThemeSwitchWidget(),
-                          AppFilterWidget(),
-                          AppSortWidget(),
+                          Flexible(
+                            flex: 1,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              spacing: 16,
+                              children: [
+                                ThemeSwitchWidget(),
+                                AppFilterWidget(),
+                                AppSortWidget(),
+                              ],
+                            ),
+                          ),
+                          Flexible(flex: 4, child: ScreenTodo()),
                         ],
-                      ),
-                    ),
-                    Flexible(flex: 4, child: ScreenTodo()),
-                  ],
-                );
-              },
-            ),
+                      );
+                    },
+                  ),
             floatingActionButton: FloatingActionButton(
               onPressed: () {
-                final newItem = ObjTodo(
-                  id: context.read<ProviderToDo>().todoList.length,
+                if (context
+                        .read<ProviderService>()
+                        .supabase
+                        .auth
+                        .currentSession ==
+                    null) {
+                  return;
+                }
+
+                /*final newItem = ObjBookItem(
+                  id: context.read<ProviderBookItems>().todoList.length,
                   description: "Leer",
                   title: "Leer",
                   isCompleted: false,
@@ -103,10 +117,12 @@ class _MainAppState extends State<MainApp> {
                   priority: Priority.low,
                   isHeader: false,
                   headerId: 0,
-                );
+                  bookDod: 4500,
+                  bookCounter: 0,
+                );*/
 
-                final newItem2 = ObjHeader(
-                  id: context.read<ProviderToDo>().headerList.length,
+                final newItem2 = ObjBookHeader(
+                  id: context.read<ProviderBookItems>().headerList.length,
                   description: "Leer",
                   title: "Leer",
                   isCompleted: false,
@@ -116,10 +132,12 @@ class _MainAppState extends State<MainApp> {
                   isHeader: true,
                   subTopics: [],
                   headerId: 0,
+                  bookDod: 4500,
+                  bookCounter: 0,
                 );
 
-                context.read<ProviderToDo>().addItem(newItem);
-                context.read<ProviderToDo>().addHeader(newItem2);
+                //context.read<ProviderBookItems>().addItem(newItem);
+                context.read<ProviderBookItems>().addHeader(newItem2);
                 //context.read<ProviderToDo>().addItemToHeader(0, newItem);
               },
               child: Icon(Icons.add_alarm),
@@ -127,6 +145,19 @@ class _MainAppState extends State<MainApp> {
           ),
         );
       },
+    );
+  }
+}
+
+extension ContextExtension on BuildContext {
+  void showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(this).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError
+            ? Theme.of(this).colorScheme.error
+            : Theme.of(this).snackBarTheme.backgroundColor,
+      ),
     );
   }
 }

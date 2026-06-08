@@ -1,7 +1,7 @@
-import 'package:book_builder/objects/obj_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/objects/to_do_list_element.dart';
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/providers/provider_todo.dart';
 import 'package:book_builder/widgets/app_user_data.dart';
 import 'package:book_builder/widgets/dialog_confirm_delete.dart';
 import 'package:flutter/material.dart';
@@ -15,10 +15,10 @@ class ScreenTodo extends StatefulWidget {
 }
 
 class _ScreenTodoState extends State<ScreenTodo> {
-  List<ObjTodo> getCondensedList() {
-    List<ObjTodo> condensedList = [];
+  List<ObjBookItem> getCondensedList() {
+    List<ObjBookItem> condensedList = [];
 
-    for (var header in context.read<ProviderToDo>().headerList) {
+    for (var header in context.read<ProviderBookItems>().headerList) {
       condensedList.add(header);
       for (var topic in header.subTopics) {
         condensedList.add(topic);
@@ -30,7 +30,7 @@ class _ScreenTodoState extends State<ScreenTodo> {
 
   @override
   Widget build(BuildContext context) {
-    final todoManager = context.watch<ProviderToDo>();
+    final todoManager = context.watch<ProviderBookItems>();
     final filteredList = getCondensedList().where((element) {
       //todoManager.todoList.where((element) {
       return getFilteredList(todoManager, element);
@@ -68,11 +68,11 @@ class _ScreenTodoState extends State<ScreenTodo> {
               filteredList.removeAt(index);
             });
 
-            if (listItem is ObjHeader) {
-              context.read<ProviderToDo>().removeHeader(listItem);
+            if (listItem is ObjBookHeader) {
+              context.read<ProviderBookItems>().removeHeader(listItem);
               context.read<ProviderService>().removeFromList(context, listItem);
             } else {
-              context.read<ProviderToDo>().removeItemFromHeader(
+              context.read<ProviderBookItems>().removeItemFromHeader(
                 listItem.headerId,
                 listItem,
               );
@@ -107,7 +107,10 @@ class _ScreenTodoState extends State<ScreenTodo> {
     );
   }
 
-  void sortFilteredList(List<ObjTodo> filteredList, ProviderToDo todoManager) {
+  void sortFilteredList(
+    List<ObjBookItem> filteredList,
+    ProviderBookItems todoManager,
+  ) {
     filteredList.sort(
       (element, compareElement) {
         if (todoManager.sortingOption == ToDoSort.prioritaet) {
@@ -131,7 +134,7 @@ class _ScreenTodoState extends State<ScreenTodo> {
     );
   }
 
-  bool getFilteredList(ProviderToDo todoManager, ObjTodo element) {
+  bool getFilteredList(ProviderBookItems todoManager, ObjBookItem element) {
     if (todoManager.filters.contains(ToDoFilter.alle)) {
       return true;
     }
@@ -166,7 +169,7 @@ class _ScreenTodoState extends State<ScreenTodo> {
 
   Future<dynamic> toDoBottomSheet(
     BuildContext context,
-    ObjTodo listItem,
+    ObjBookItem listItem,
     int index,
   ) {
     return showModalBottomSheet(

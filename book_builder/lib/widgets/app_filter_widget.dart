@@ -1,5 +1,5 @@
-import 'package:book_builder/objects/obj_todo.dart';
-import 'package:book_builder/providers/provider_todo.dart';
+import 'package:book_builder/objects/obj_book_item.dart';
+import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/widgets/to_do_priority_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +11,7 @@ class AppFilterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ProviderToDo todoManager = context.watch<ProviderToDo>();
+    ProviderBookItems todoManager = context.watch<ProviderBookItems>();
     return Row(
       spacing: 4,
       children: [
