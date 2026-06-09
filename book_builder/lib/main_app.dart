@@ -43,39 +43,46 @@ class _MainAppState extends State<MainApp> {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: themeModeNotifier.themeModeNotifier.value,
-          title: "ToDo List",
+          title: "BookMaker",
           home: Scaffold(
             appBar: AppBar(
               title: AppDisplayWidget(),
               //ThemeSwitchWidget(),
             ),
 
-            body:
-                context.read<ProviderService>().supabase.auth.currentSession ==
-                    null
-                ? const LoginScreen()
+            body: context.watch<ProviderService>().getUseOnlineDB
+                ? context
+                              .read<ProviderService>()
+                              .supabase
+                              .auth
+                              .currentSession ==
+                          null
+                      ? const LoginScreen()
+                      : Consumer<ProviderBookItems>(
+                          builder: (context, todoItems, child) {
+                            return Column(
+                              //mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Flexible(
+                                  flex: 1,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    spacing: 16,
+                                    children: [
+                                      ThemeSwitchWidget(),
+                                      AppFilterWidget(),
+                                      AppSortWidget(),
+                                    ],
+                                  ),
+                                ),
+                                Flexible(flex: 4, child: ScreenTodo()),
+                              ],
+                            );
+                          },
+                        )
                 : Consumer<ProviderBookItems>(
                     builder: (context, todoItems, child) {
-                      //TODO: check if we really need this anymore ...
-                      /*if (todoItems.todoList.isEmpty) {
-                  return Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        spacing: 16,
-                        children: [
-                          ThemeSwitchWidget(),
-                          AppFilterWidget(),
-                          AppSortWidget(),
-                        ],
-                      ),
-
-                      Center(
-                        child: Text('Keine ToDos verteilt.'),
-                      ),
-                    ],
-                  );
-                }*/
                       return Column(
                         //mainAxisSize: MainAxisSize.max,
                         children: [
@@ -107,20 +114,6 @@ class _MainAppState extends State<MainApp> {
                   return;
                 }
 
-                /*final newItem = ObjBookItem(
-                  id: context.read<ProviderBookItems>().todoList.length,
-                  description: "Leer",
-                  title: "Leer",
-                  isCompleted: false,
-                  createdAt: DateTime.now(),
-                  dueDate: DateTime.now(),
-                  priority: Priority.low,
-                  isHeader: false,
-                  headerId: 0,
-                  bookDod: 4500,
-                  bookCounter: 0,
-                );*/
-
                 final newItem2 = ObjBookHeader(
                   id: context.read<ProviderBookItems>().headerList.length,
                   description: "Leer",
@@ -136,9 +129,7 @@ class _MainAppState extends State<MainApp> {
                   bookCounter: 0,
                 );
 
-                //context.read<ProviderBookItems>().addItem(newItem);
                 context.read<ProviderBookItems>().addHeader(newItem2);
-                //context.read<ProviderToDo>().addItemToHeader(0, newItem);
               },
               child: Icon(Icons.add_alarm),
             ),

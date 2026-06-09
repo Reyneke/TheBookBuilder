@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:book_builder/main_app.dart';
 import 'package:book_builder/providers/provider_service.dart';
 import 'package:book_builder/screens/login_screen.dart';
 import 'package:book_builder/widgets/app_user_avatar.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,8 +18,10 @@ class UserSetupScreen extends StatefulWidget {
 
 class _UserSetupScreenState extends State<UserSetupScreen> {
   final _usernameController = TextEditingController();
+  final _useremailController = TextEditingController();
   final _websiteController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _oldpasswordController = TextEditingController();
 
   String? _avatarUrl;
   var _loading = true;
@@ -59,6 +64,38 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     }
   }
 
+  Future<void> _updatePasswordAndEmail() async {
+    setState(() {
+      _loading = true;
+    });
+    final userEmail = _useremailController.text.trim();
+    final oldUserPassword = _oldpasswordController.text.trim();
+    final userPassword = _passwordController.text.trim();
+
+    try {
+      if ((sha1.convert(utf8.encode(userPassword))) ==
+          (sha1.convert(utf8.encode(oldUserPassword)))) {
+        await context.read<ProviderService>().supabase.auth.updateUser(
+          UserAttributes(email: userEmail, password: userPassword),
+        );
+      } else {
+        if (mounted) {
+          context.showSnackBar('Wrong password', isError: true);
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        context.showSnackBar('Unexpected error occurred', isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
   /// Called when user taps `Update` button
   Future<void> _updateProfile() async {
     setState(() {
@@ -73,7 +110,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       'website': website,
       'updated_at': DateTime.now().toIso8601String(),
     };
-    final newPassword = _passwordController.text.trim();
+
     try {
       await context
           .read<ProviderService>()
@@ -81,12 +118,6 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
           .from('profiles')
           .upsert(updates);
       if (mounted) context.showSnackBar('Successfully updated profile!');
-
-      //TODO EMail change here
-
-      if (newPassword.isNotEmpty) {
-        //TODO Password change here
-      }
     } on PostgrestException catch (error) {
       if (mounted) context.showSnackBar(error.message, isError: true);
     } catch (error) {
@@ -151,6 +182,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         );
       }
     }
+    _updatePasswordAndEmail();
   }
 
   @override
@@ -162,8 +194,10 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _useremailController.dispose();
     _websiteController.dispose();
     _passwordController.dispose();
+    _oldpasswordController.dispose();
     super.dispose();
   }
 
@@ -187,8 +221,18 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         ),
         const SizedBox(height: 8),
         TextFormField(
+          controller: _useremailController,
+          decoration: const InputDecoration(labelText: 'Email'),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
           controller: _websiteController,
           decoration: const InputDecoration(labelText: 'Website'),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _oldpasswordController,
+          decoration: const InputDecoration(labelText: 'altes Passwort'),
         ),
         const SizedBox(height: 8),
         TextFormField(

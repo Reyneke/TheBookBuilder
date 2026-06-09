@@ -1,4 +1,6 @@
+import 'package:book_builder/providers/provider_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class AppDisplayWidget extends StatelessWidget {
   const AppDisplayWidget({
@@ -7,6 +9,18 @@ class AppDisplayWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text("My ToDo List");
+    bool getUseDB = false;
+    return Row(
+      spacing: 4,
+      children: [
+        Text("Bookmaker: "),
+        Switch(
+          value: getUseDB,
+          onChanged: (bool newStatus) {
+            context.watch<ProviderService>().toggleOnlineOffline(newStatus);
+          },
+        ),
+      ],
+    );
   }
 }

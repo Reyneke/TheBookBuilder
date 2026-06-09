@@ -20,6 +20,7 @@ dependencies:
   #json_serializable: ^6.14.1
   supabase_flutter: ^2.0.0
   image_picker: ^1.2.2
+  crypto: 
 
 dev_dependencies:
   flutter_test:

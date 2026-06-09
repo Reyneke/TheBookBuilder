@@ -10,8 +10,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ProviderService extends ChangeNotifier {
   static const _serviceKeys = 'serviceKeys';
   static const _themeKey = 'themeKey';
+  static const _offlineKey = 'offlineKey';
   bool _isDarkMode = true;
   bool get isDarkMode => _isDarkMode;
+  bool _getUseOnlineDB = false;
+  bool get getUseOnlineDB => _getUseOnlineDB;
 
   final List<String> _keyRing = [];
   List<String> get keyRing => _keyRing;
@@ -103,5 +106,17 @@ class ProviderService extends ChangeNotifier {
   void getTheme() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = (prefs.getBool(_themeKey) ?? true);
+  }
+
+  void toggleOnlineOffline(bool newStatus) async {
+    final prefs = await SharedPreferences.getInstance();
+    _getUseOnlineDB = newStatus;
+    await prefs.setBool(_offlineKey, newStatus);
+    notifyListeners();
+  }
+
+  void getOnlineOffline() async {
+    final prefs = await SharedPreferences.getInstance();
+    _getUseOnlineDB = (prefs.getBool(_themeKey) ?? false);
   }
 }
