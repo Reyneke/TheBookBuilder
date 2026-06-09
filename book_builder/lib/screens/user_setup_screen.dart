@@ -21,7 +21,8 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
   final _useremailController = TextEditingController();
   final _websiteController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _oldpasswordController = TextEditingController();
+  final _passwordConfirmationController = TextEditingController();
+  String? oldPassword;
 
   String? _avatarUrl;
   var _loading = true;
@@ -48,6 +49,16 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
           .single();
       _usernameController.text = (data['username'] ?? '') as String;
       _websiteController.text = (data['website'] ?? '') as String;
+      _useremailController.text = context
+          .read<ProviderService>()
+          .supabase
+          .auth
+          .currentSession!
+          .user
+          .email!;
+      oldPassword = (data['user_password'] ?? '') as String;
+      _passwordController.text = '';
+      _passwordConfirmationController.text = '';
       _avatarUrl = (data['avatar_url'] ?? '') as String;
     } on PostgrestException catch (error) {
       if (mounted) context.showSnackBar(error.message, isError: true);
@@ -65,35 +76,44 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
   }
 
   Future<void> _updatePasswordAndEmail() async {
-    setState(() {
+    /*setState(() {
       _loading = true;
-    });
+    });*/
     final userEmail = _useremailController.text.trim();
-    final oldUserPassword = _oldpasswordController.text.trim();
+    final confirmPassword = _passwordConfirmationController.text.trim();
     final userPassword = _passwordController.text.trim();
+    List<int> bytes = utf8.encode(userPassword);
+    Digest sha256Hash = sha256.convert(bytes);
+    final user = context.read<ProviderService>().supabase.auth.currentUser;
 
-    try {
-      if ((sha1.convert(utf8.encode(userPassword))) ==
-          (sha1.convert(utf8.encode(oldUserPassword)))) {
+    if (user?.email != userEmail) {
+      try {
         await context.read<ProviderService>().supabase.auth.updateUser(
-          UserAttributes(email: userEmail, password: userPassword),
+          UserAttributes(email: userEmail),
         );
-      } else {
+      } catch (error) {
         if (mounted) {
-          context.showSnackBar('Wrong password', isError: true);
+          context.showSnackBar('Email: $error', isError: true);
         }
       }
-    } catch (error) {
-      if (mounted) {
-        context.showSnackBar('Unexpected error occurred', isError: true);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
+    }
+
+    if ((userPassword.isNotEmpty) && (confirmPassword == userPassword)) {
+      try {
+        await context.read<ProviderService>().supabase.auth.updateUser(
+          UserAttributes(password: sha256Hash.toString()),
+        );
+      } catch (error) {
+        if (mounted) {
+          context.showSnackBar('Password: $error', isError: true);
+        }
       }
     }
+    /*if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }*/
   }
 
   /// Called when user taps `Update` button
@@ -110,6 +130,8 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       'website': website,
       'updated_at': DateTime.now().toIso8601String(),
     };
+
+    _updatePasswordAndEmail();
 
     try {
       await context
@@ -182,7 +204,6 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         );
       }
     }
-    _updatePasswordAndEmail();
   }
 
   @override
@@ -197,7 +218,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     _useremailController.dispose();
     _websiteController.dispose();
     _passwordController.dispose();
-    _oldpasswordController.dispose();
+    _passwordConfirmationController.dispose();
     super.dispose();
   }
 
@@ -231,7 +252,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
         ),
         const SizedBox(height: 8),
         TextFormField(
-          controller: _oldpasswordController,
+          controller: _passwordConfirmationController,
           decoration: const InputDecoration(labelText: 'altes Passwort'),
         ),
         const SizedBox(height: 8),
