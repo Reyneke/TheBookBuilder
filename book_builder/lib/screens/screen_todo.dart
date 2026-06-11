@@ -23,6 +23,10 @@ class _ScreenTodoState extends State<ScreenTodo> {
       for (var topic in header.subTopics) {
         condensedList.add(topic);
       }
+
+      if (header.subTopics.isNotEmpty) {
+        sortFilteredList(header.subTopics, context.read<ProviderBookItems>());
+      }
     }
 
     return condensedList;
@@ -36,9 +40,9 @@ class _ScreenTodoState extends State<ScreenTodo> {
       return getFilteredList(todoManager, element);
     }).toList();
 
-    if (filteredList.isNotEmpty) {
+    /*if (filteredList.isNotEmpty) {
       sortFilteredList(filteredList, todoManager);
-    }
+    }*/
 
     if (filteredList.isEmpty) {
       return Center(

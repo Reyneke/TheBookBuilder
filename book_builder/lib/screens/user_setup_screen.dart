@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:book_builder/main_app.dart';
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/screens/login_screen.dart';
 import 'package:book_builder/widgets/app_user_avatar.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +22,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
   final _passwordController = TextEditingController();
   final _passwordConfirmationController = TextEditingController();
   String? oldPassword;
+  final _formKey = GlobalKey<FormState>();
 
   String? _avatarUrl;
   var _loading = true;
@@ -33,20 +33,21 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       _loading = true;
     });
     try {
-      final userId = context
+      final getLoadingProfileSuccess = await context
           .read<ProviderService>()
-          .supabase
-          .auth
-          .currentSession!
-          .user
-          .id;
-      final data = await context
-          .read<ProviderService>()
-          .supabase
+          .updateUserData();
+      if (getLoadingProfileSuccess != null) {
+        throw Exception(getLoadingProfileSuccess);
+      }
+
+      //final userId = context.read<ProviderService>().userId;
+      /*.supabase.auth.currentSession!.user.id;*/
+      final data = context.read<ProviderService>().userData;
+      /*.supabase
           .from('profiles')
           .select()
           .eq('id', userId)
-          .single();
+          .single();*/
       _usernameController.text = (data['username'] ?? '') as String;
       _websiteController.text = (data['website'] ?? '') as String;
       _useremailController.text = context
@@ -60,6 +61,9 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       _passwordController.text = '';
       _passwordConfirmationController.text = '';
       _avatarUrl = (data['avatar_url'] ?? '') as String;
+      context.read<ProviderService>().setUserValidated(
+        ((data['is_authorized'] ?? false) as bool),
+      );
     } on PostgrestException catch (error) {
       if (mounted) context.showSnackBar(error.message, isError: true);
     } catch (error) {
@@ -129,6 +133,9 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
       'username': userName,
       'website': website,
       'updated_at': DateTime.now().toIso8601String(),
+      'is_authorized': true,
+      'soullight': 0,
+      'user_group': context.read<ProviderService>().userGroup,
     };
 
     _updatePasswordAndEmail();
@@ -200,7 +207,7 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
     } finally {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => LoginScreen()),
+          MaterialPageRoute(builder: (_) => MainApp()),
         );
       }
     }
@@ -224,50 +231,95 @@ class _UserSetupScreenState extends State<UserSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(
-        8,
-      ), // .symmetric(vertical: 18, horizontal: 12),
-      children: [
-        const Text('Profile'),
-        const SizedBox(height: 8),
-        AppUserAvatar(
-          imageUrl: _avatarUrl,
-          onUpload: _onUpload,
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _usernameController,
-          decoration: const InputDecoration(labelText: 'User Name'),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _useremailController,
-          decoration: const InputDecoration(labelText: 'Email'),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _websiteController,
-          decoration: const InputDecoration(labelText: 'Website'),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordConfirmationController,
-          decoration: const InputDecoration(labelText: 'altes Passwort'),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordController,
-          decoration: const InputDecoration(labelText: 'neues Passwort'),
-        ),
-        const SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: _loading ? null : _updateProfile,
-          child: Text(_loading ? 'Saving...' : 'Update'),
-        ),
-        const SizedBox(height: 8),
-        TextButton(onPressed: _signOut, child: const Text('Sign Out')),
-      ],
+    return //_loading
+    //?
+    Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(
+          8,
+        ), // .symmetric(vertical: 18, horizontal: 12),
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {
+                  context.read<ProviderService>().setUserSetup(false);
+                },
+                icon: Icon(Icons.backspace),
+              ),
+              const Text('Zurück'),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+          AppUserAvatar(
+            imageUrl: _avatarUrl,
+            onUpload: _onUpload,
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _usernameController,
+            decoration: const InputDecoration(labelText: 'User Name'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Bitte geben Sie eine Emailadresse ein.';
+              }
+
+              if (!value.contains('@') && !value.contains('.')) {
+                return 'Bitte geben Sie eine gültige Emailadresse ein.';
+              }
+
+              return null;
+            },
+            controller: _useremailController,
+            decoration: const InputDecoration(labelText: 'Email'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _websiteController,
+            decoration: const InputDecoration(labelText: 'Website'),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Bitte geben Sie ein Passwort an.';
+              }
+
+              if (value.length < 8) {
+                return 'Bitte wählen Sie ein Passwort, dass länger, als 8 Zeichen ist.';
+              }
+              return null;
+            },
+            controller: _passwordController,
+            decoration: const InputDecoration(
+              labelText: 'neues Passwort',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _passwordConfirmationController,
+            decoration: const InputDecoration(
+              labelText: 'neues Passwort (Bestätigung)',
+            ),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _loading ? null : _updateProfile,
+            child: Text(_loading ? 'Saving...' : 'Update'),
+          ),
+          const SizedBox(height: 8),
+          TextButton(onPressed: _signOut, child: const Text('Sign Out')),
+        ],
+      ),
     );
+    /*: CircularProgressIndicator(
+            semanticsLabel: "Lade Nutzerdaten ...",
+            semanticsValue: "Lade Nutzerdaten ...",
+          );*/
   }
 }

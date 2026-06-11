@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
@@ -27,11 +29,18 @@ class ToDoListElement extends StatelessWidget {
                 context.read<ProviderBookItems>().addItemToHeader(
                   listItem.id,
                   ObjBookItem(
-                    id: context
+                    id:
+                        (Random().nextInt(
+                          DateTime.now().millisecond,
+                        ) +
+                        Random().nextInt(
+                          DateTime.now().millisecond,
+                        )),
+                    /*context
                         .read<ProviderBookItems>()
                         .headerList[listItem.id]
                         .subTopics
-                        .length,
+                        .length,*/
                     description: "Leer",
                     title: "Leer",
                     isCompleted: false,

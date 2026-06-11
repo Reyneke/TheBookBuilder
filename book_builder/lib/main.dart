@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:book_builder/main_app.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
@@ -8,14 +10,18 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '/env_files/supabase_key.dart';
+
 void main() async {
   if (kIsWeb) {
     usePathUrlStrategy();
   }
   await Supabase.initialize(
-    url: 'https://rfedgytklxvhwumhejbd.supabase.co',
-    publishableKey: 'sb_publishable_DMuSpA1PAZ1QXGUr9Gy45A_59EwRLRz',
+    url: url,
+    publishableKey: publishableKey,
   );
+
+  Random(DateTime.now().millisecondsSinceEpoch);
 
   runApp(
     MultiProvider(

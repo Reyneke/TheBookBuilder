@@ -36,6 +36,14 @@ class ProviderBookItems extends ChangeNotifier {
     return index.indexWhere((element) => element.id == oldItem.id);
   }
 
+  ObjBookHeader getHeaderId(int id) {
+    return _headerList.singleWhere((element) => element.id == id);
+  }
+
+  ObjBookItem getBookId(int id, ObjBookHeader header) {
+    return header.subTopics.singleWhere((element) => element.id == id);
+  }
+
   void clearList() {
     _todoList.clear();
     notifyListeners();
@@ -57,18 +65,18 @@ class ProviderBookItems extends ChangeNotifier {
 
   void addItemToHeader(int index, ObjBookItem newItem) {
     //_todoList.add(newItem);
-    _headerList.elementAt(index).subTopics.add(newItem);
+    getHeaderId(index).subTopics.add(newItem);
     notifyListeners();
   }
 
   void removeItemFromHeader(int index, ObjBookItem oldItem) {
     //_todoList.remove(oldItem);
     final position = getItemPosition(
-      _headerList.elementAt(index).subTopics,
+      getHeaderId(index).subTopics,
       oldItem,
     );
     if (position >= 0) {
-      _headerList.elementAt(index).subTopics.removeAt(position);
+      getHeaderId(index).subTopics.removeAt(position);
       notifyListeners();
     }
   }
@@ -79,59 +87,61 @@ class ProviderBookItems extends ChangeNotifier {
   }
 
   void clearAllItemsFromHeader(int index) {
-    _headerList.elementAt(index).subTopics.clear();
+    getHeaderId(index).subTopics.clear();
     notifyListeners();
   }
 
   void updateCompletion(int id, bool newState) {
     //_todoList[id].isCompleted = newState;
-    _headerList[id].isCompleted = newState;
+    getHeaderId(id).isCompleted = newState;
     notifyListeners();
   }
 
   void updateCompletionItem(int headerId, int id, bool newState) {
     //_todoList[id].isCompleted = newState;
-    _headerList[headerId].subTopics[id].isCompleted = newState;
+    getBookId(id, getHeaderId(headerId)).isCompleted = newState;
     notifyListeners();
   }
 
   void updateTitle(int id, String newTitle) {
-    _headerList[id].title = newTitle;
+    getHeaderId(id).title = newTitle;
+    //_headerList[id].title = newTitle;
     notifyListeners();
   }
 
   void updateTitleItem(int headerId, int id, String newTitle) {
-    _headerList[headerId].subTopics[id].title = newTitle;
+    getBookId(id, getHeaderId(headerId)).title = newTitle;
+    //_headerList[headerId].subTopics[id].title = newTitle;
     notifyListeners();
   }
 
   void updateDescription(int id, String newDesc) {
-    _headerList[id].description = newDesc;
+    getHeaderId(id).description = newDesc;
     notifyListeners();
   }
 
   void updateDescriptionItem(int headerId, int id, String newDesc) {
-    _headerList[headerId].subTopics[id].description = newDesc;
+    getBookId(id, getHeaderId(headerId)).description = newDesc;
     notifyListeners();
   }
 
   void updatePriority(int id, Priority newPriority) {
-    _headerList[id].priority = newPriority;
+    getHeaderId(id).priority = newPriority;
     notifyListeners();
   }
 
   void updatePriorityItem(int headerId, int id, Priority newPriority) {
-    _headerList[headerId].subTopics[id].priority = newPriority;
+    getBookId(id, getHeaderId(headerId)).priority = newPriority;
     notifyListeners();
   }
 
   void updateCompletionDate(int id, DateTime newDate) {
-    _headerList[id].dueDate = newDate;
+    getHeaderId(id).dueDate = newDate;
     notifyListeners();
   }
 
   void updateCompletionDateItem(int headerId, int id, DateTime newDate) {
-    _headerList[headerId].subTopics[id].dueDate = newDate;
+    getBookId(id, getHeaderId(headerId)).dueDate = newDate;
     notifyListeners();
   }
 

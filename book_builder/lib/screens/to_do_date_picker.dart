@@ -35,14 +35,30 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
   }
 
   String getParsedDateString(DateTime selectedDate, bool updateDueTime) {
+    final headerObject = widget.isHeader
+        ? context.read<ProviderBookItems>().getHeaderId(widget.index)
+        : context.read<ProviderBookItems>().getHeaderId(
+            widget.indexHeader,
+          );
+    /*final itemObject = context.read<ProviderBookItems>().getBookId(
+      widget.index,
+      headerObject,
+    );*/
     if (updateDueTime) {
       widget.isHeader
-          ? context.read<ProviderBookItems>().headerList[widget.index].dueDate =
+          ? headerObject.dueDate =
+                //context.read<ProviderBookItems>().headerList[widget.index].dueDate =
                 selectedDate
-          : context
+          : /*context
                     .read<ProviderBookItems>()
                     .headerList[widget.indexHeader]
                     .subTopics[widget.index]
+                    .dueDate*/ /*itemObject*/ context
+                    .read<ProviderBookItems>()
+                    .getBookId(
+                      widget.index,
+                      headerObject,
+                    )
                     .dueDate =
                 selectedDate;
       context.read<ProviderService>().saveToDoList(context);
@@ -53,6 +69,15 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
 
   @override
   Widget build(BuildContext context) {
+    final headerObject = widget.isHeader
+        ? context.read<ProviderBookItems>().getHeaderId(widget.index)
+        : context.read<ProviderBookItems>().getHeaderId(
+            widget.indexHeader,
+          );
+    /*final itemObject = context.read<ProviderBookItems>().getBookId(
+      widget.index,
+      headerObject,
+    );*/
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
@@ -62,17 +87,24 @@ class _ToDoDatePickerState extends State<ToDoDatePicker> {
               selectedDate == null
                   ? widget.isHeader
                         ? getParsedDateString(
-                            context
+                            headerObject.dueDate,
+                            /*context
                                 .read<ProviderBookItems>()
                                 .headerList[widget.index]
-                                .dueDate,
+                                .dueDate*/
                             false,
                           )
                         : getParsedDateString(
-                            context
+                            /*context
                                 .read<ProviderBookItems>()
                                 .headerList[widget.indexHeader]
-                                .subTopics[widget.index]
+                                .subTopics[widget.index]*/
+                            context
+                                .read<ProviderBookItems>()
+                                .getBookId(
+                                  widget.index,
+                                  headerObject,
+                                )
                                 .dueDate,
                             false,
                           ) /*'Noch kein Datum ausgewählt'*/

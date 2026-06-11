@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
 import 'package:book_builder/providers/theme_notifier.dart';
 import 'package:book_builder/screens/login_screen.dart';
 import 'package:book_builder/screens/screen_todo.dart';
+import 'package:book_builder/screens/user_setup_screen.dart';
 import 'package:book_builder/theme/app_theme.dart';
 import 'package:book_builder/widgets/app_display_widget.dart';
 import 'package:book_builder/widgets/app_filter_widget.dart';
@@ -28,6 +31,19 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     final themeModeNotifier = context.watch<ThemeNotifier>();
+    bool callSetup = false;
+    bool getShowLoadingScreen =
+        ((context.read<ProviderService>().getUseOnlineDB) &&
+            (context.read<ProviderService>().supabase.auth.currentSession ==
+                null))
+        ? true
+        : false;
+    bool getShowSetupScreen =
+        (((context.read<ProviderService>().getUseOnlineDB) &&
+                (!context.read<ProviderService>().isUserValidated)) ||
+            (context.read<ProviderService>().getUserSetup))
+        ? true
+        : false;
     context.read<ProviderService>().loadToDoList(context);
 
     themeModeNotifier.setThemeModeNotifier(
@@ -50,37 +66,10 @@ class _MainAppState extends State<MainApp> {
               //ThemeSwitchWidget(),
             ),
 
-            body: context.watch<ProviderService>().getUseOnlineDB
-                ? context
-                              .read<ProviderService>()
-                              .supabase
-                              .auth
-                              .currentSession ==
-                          null
-                      ? const LoginScreen()
-                      : Consumer<ProviderBookItems>(
-                          builder: (context, todoItems, child) {
-                            return Column(
-                              //mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Flexible(
-                                  flex: 1,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceEvenly,
-                                    spacing: 16,
-                                    children: [
-                                      ThemeSwitchWidget(),
-                                      AppFilterWidget(),
-                                      AppSortWidget(),
-                                    ],
-                                  ),
-                                ),
-                                Flexible(flex: 4, child: ScreenTodo()),
-                              ],
-                            );
-                          },
-                        )
+            body: getShowLoadingScreen
+                ? const LoginScreen()
+                : getShowSetupScreen
+                ? UserSetupScreen()
                 : Consumer<ProviderBookItems>(
                     builder: (context, todoItems, child) {
                       return Column(
@@ -92,6 +81,14 @@ class _MainAppState extends State<MainApp> {
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               spacing: 16,
                               children: [
+                                IconButton(
+                                  onPressed: () {
+                                    context
+                                        .read<ProviderService>()
+                                        .setUserSetup(true);
+                                  },
+                                  icon: Icon(Icons.settings_rounded),
+                                ),
                                 ThemeSwitchWidget(),
                                 AppFilterWidget(),
                                 AppSortWidget(),
@@ -115,7 +112,13 @@ class _MainAppState extends State<MainApp> {
                 }
 
                 final newItem2 = ObjBookHeader(
-                  id: context.read<ProviderBookItems>().headerList.length,
+                  id:
+                      (Random().nextInt(
+                        DateTime.now().millisecond,
+                      ) +
+                      Random().nextInt(
+                        DateTime.now().millisecond,
+                      )), //(context.read<ProviderBookItems>().headerList.length),
                   description: "Leer",
                   title: "Leer",
                   isCompleted: false,
