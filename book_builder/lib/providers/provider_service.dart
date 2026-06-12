@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:book_builder/main_app.dart';
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:crypto/crypto.dart';
@@ -36,7 +37,7 @@ class ProviderService extends ChangeNotifier {
 
   List<Map<String, dynamic>> _bookdata = [];
   List<Map<String, dynamic>> get bookdata => _bookdata;
-  final String _currentBook = 'Lorem Ipsum';
+  String _currentBook = 'Lorem Ipsum';
   String get currentBook => _currentBook;
   int currentBookId = 0;
 
@@ -142,7 +143,7 @@ class ProviderService extends ChangeNotifier {
   void loadToDoList(BuildContext context) async {
     final todoManager = context.read<ProviderBookItems>();
     //resetAllSettings();
-    getOnlineOffline();
+    //getOnlineOffline();
 
     if (todoManager.headerList.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
@@ -194,6 +195,34 @@ class ProviderService extends ChangeNotifier {
     }
   }
 
+  Future<PostgrestList?> getBookTitles(BuildContext context) async {
+    final supabase = Supabase.instance.client;
+
+    try {
+      final books = await supabase
+          .from('books')
+          .select() // Alle Spalten abrufen
+          .order('titel', ascending: true);
+      //.single(); // Optional: nach Titel sortieren
+
+      return books;
+    } catch (error) {
+      //print('Fehler beim Abrufen der Bücher: $error');
+      if (context.mounted) {
+        context.showSnackBar('Konnte Buchtitel nicht laden: $error');
+      }
+    }
+    return null;
+  }
+
+  void setNewBookName(String newName, BuildContext context) async {
+    final todoManager = context.read<ProviderBookItems>();
+    _currentBook = newName;
+    notifyListeners();
+
+    todoManager.clearHeaderList(true);
+  }
+
   // Alle Einstellungen zurücksetzen
   Future<void> resetAllSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -211,10 +240,16 @@ class ProviderService extends ChangeNotifier {
     _isDarkMode = (prefs.getBool(_themeKey) ?? true);
   }
 
-  void toggleOnlineOffline(bool newStatus) async {
-    final prefs = await SharedPreferences.getInstance();
-    _getUseOnlineDB = newStatus;
-    await prefs.setBool(_offlineKey, newStatus);
+  void toggleOnlineOffline(bool newStatus, BuildContext context) async {
+    //final prefs = await SharedPreferences.getInstance();
+    final todoManager = context.read<ProviderBookItems>();
+    if (newStatus != _getUseOnlineDB) {
+      _getUseOnlineDB = newStatus;
+      //await prefs.setBool(_offlineKey, newStatus);
+      if (todoManager.headerList.isNotEmpty) {
+        todoManager.clearHeaderList(false);
+      }
+    }
 
     if ((!_getUseOnlineDB) && (supabase.auth.currentSession != null)) {
       await supabase.auth.signOut();
@@ -222,10 +257,11 @@ class ProviderService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void getOnlineOffline() async {
+  /*void getOnlineOffline() async {
     final prefs = await SharedPreferences.getInstance();
-    _getUseOnlineDB = (prefs.getBool(_themeKey) ?? false);
-  }
+    _getUseOnlineDB = (prefs.getBool(_offlineKey) ?? false);
+    //notifyListeners();
+  }*/
 
   //User Daten hier
   void setUserValidated(bool newStatus) {

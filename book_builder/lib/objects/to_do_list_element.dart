@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
+import 'package:book_builder/theme/app_theme.dart';
 import 'package:book_builder/widgets/to_do_priority_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,7 @@ class ToDoListElement extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHeader = (listItem.runtimeType == ObjBookHeader) ? true : false;
+
     return ListTile(
       leading: isHeader
           ? IconButton(
@@ -59,7 +61,15 @@ class ToDoListElement extends StatelessWidget {
           : listItem.isCompleted
           ? Image.asset(imageDone)
           : Image.asset(imageNotDone),
-      title: Text(listItem.title),
+      title: isHeader
+          ? Text(
+              listItem.title,
+              style: AppTheme.baseTextTheme.headlineSmall,
+            )
+          : Text(
+              "${listItem.title} - ${listItem.bookCounter} / ${listItem.bookDod}",
+              style: AppTheme.baseTextTheme.bodyLarge,
+            ),
       subtitle: ToDoPriorityIndicator(priority: listItem.priority),
       trailing: Consumer<ProviderBookItems>(
         builder: (context, completed, child) {

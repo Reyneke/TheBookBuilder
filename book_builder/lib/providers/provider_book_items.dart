@@ -2,8 +2,8 @@ import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:flutter/material.dart';
 
 class ProviderBookItems extends ChangeNotifier {
-  final List<ObjBookItem> _todoList = [];
-  List<ObjBookItem> get todoList => _todoList;
+  //final List<ObjBookItem> _todoList = [];
+  //List<ObjBookItem> get todoList => _todoList;
 
   final List<ObjBookHeader> _headerList = [];
   List<ObjBookHeader> get headerList => _headerList;
@@ -18,7 +18,7 @@ class ProviderBookItems extends ChangeNotifier {
   ToDoSort get sortingOption => _sortingOption;
 
   //TODO remove
-  int getToDoItems() {
+  /*int getToDoItems() {
     return _todoList.length;
   }
 
@@ -30,7 +30,7 @@ class ProviderBookItems extends ChangeNotifier {
   void removeItem(ObjBookItem oldItem) {
     _todoList.remove(oldItem);
     notifyListeners();
-  }
+  }*/
 
   int getItemPosition(List<ObjBookItem> index, ObjBookItem oldItem) {
     return index.indexWhere((element) => element.id == oldItem.id);
@@ -44,10 +44,10 @@ class ProviderBookItems extends ChangeNotifier {
     return header.subTopics.singleWhere((element) => element.id == id);
   }
 
-  void clearList() {
+  /*void clearList() {
     _todoList.clear();
     notifyListeners();
-  }
+  }*/
 
   void addHeader(ObjBookHeader newHeader) {
     _headerList.add(newHeader);
@@ -81,9 +81,12 @@ class ProviderBookItems extends ChangeNotifier {
     }
   }
 
-  void clearHeaderList() {
+  void clearHeaderList(bool getNotifyListeners) {
     _headerList.clear();
-    notifyListeners();
+
+    if (getNotifyListeners) {
+      notifyListeners();
+    }
   }
 
   void clearAllItemsFromHeader(int index) {
@@ -122,6 +125,28 @@ class ProviderBookItems extends ChangeNotifier {
 
   void updateDescriptionItem(int headerId, int id, String newDesc) {
     getBookId(id, getHeaderId(headerId)).description = newDesc;
+    notifyListeners();
+  }
+
+  void updateDodCounter(int id, String newCount) {
+    getHeaderId(id).bookCounter = (int.tryParse(newCount) ?? 0);
+    notifyListeners();
+  }
+
+  void updateDodCounterItem(int headerId, int id, String newCount) {
+    getBookId(id, getHeaderId(headerId)).bookCounter =
+        (int.tryParse(newCount) ?? 0);
+    notifyListeners();
+  }
+
+  void updateDod(int id, String newCount) {
+    getHeaderId(id).bookDod = (int.tryParse(newCount) ?? 0);
+    notifyListeners();
+  }
+
+  void updateDodItem(int headerId, int id, String newCount) {
+    getBookId(id, getHeaderId(headerId)).bookDod =
+        (int.tryParse(newCount) ?? 0);
     notifyListeners();
   }
 

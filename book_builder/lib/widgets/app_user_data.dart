@@ -27,6 +27,39 @@ class AppUserData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    TextEditingController dodController = TextEditingController();
+    TextEditingController dodCounterController = TextEditingController();
+    if (isHeader) {
+      dodController.text = context
+          .read<ProviderBookItems>()
+          .getHeaderId(index)
+          .bookDod
+          .toString();
+      dodCounterController.text = context
+          .read<ProviderBookItems>()
+          .getHeaderId(index)
+          .bookCounter
+          .toString();
+    } else {
+      //getBookId(id, getHeaderId(headerId))
+      dodController.text = context
+          .read<ProviderBookItems>()
+          .getBookId(
+            index,
+            context.read<ProviderBookItems>().getHeaderId(headerIndex),
+          )
+          .bookDod
+          .toString();
+      dodCounterController.text = context
+          .read<ProviderBookItems>()
+          .getBookId(
+            index,
+            context.read<ProviderBookItems>().getHeaderId(headerIndex),
+          )
+          .bookCounter
+          .toString();
+    }
+
     return Form(
       key: formKey,
       child: Wrap(
@@ -83,6 +116,68 @@ class AppUserData extends StatelessWidget {
                         descriptionController.text.trim(),
                       );
                 serviceController.saveToDoList(context);
+              },
+              icon: Icon(Icons.check),
+            ),
+            onTap: () => {},
+          ),
+          ListTile(
+            leading: Text("Aktuelle Wörter"),
+            title: TextFormField(
+              controller: dodCounterController,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Bitte giben Sie die aktuelle Anzahl von Wörtern ein';
+                }
+                return null;
+              },
+            ),
+            trailing: IconButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  isHeader
+                      ? context.read<ProviderBookItems>().updateDodCounter(
+                          index,
+                          dodCounterController.text.trim(),
+                        )
+                      : context.read<ProviderBookItems>().updateDodCounterItem(
+                          headerIndex,
+                          index,
+                          dodCounterController.text.trim(),
+                        );
+                  serviceController.saveToDoList(context);
+                }
+              },
+              icon: Icon(Icons.check),
+            ),
+            onTap: () => {},
+          ),
+          ListTile(
+            leading: Text("Benötigte Wörter"),
+            title: TextFormField(
+              controller: dodController,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Bitte geben Sie die Wortzielzahl ein';
+                }
+                return null;
+              },
+            ),
+            trailing: IconButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  isHeader
+                      ? context.read<ProviderBookItems>().updateDod(
+                          index,
+                          dodController.text.trim(),
+                        )
+                      : context.read<ProviderBookItems>().updateDodItem(
+                          headerIndex,
+                          index,
+                          dodController.text.trim(),
+                        );
+                  serviceController.saveToDoList(context);
+                }
               },
               icon: Icon(Icons.check),
             ),

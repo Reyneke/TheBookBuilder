@@ -246,6 +246,7 @@ cloduflare key: 0x4AAAAAADiJzJdDkYF08ILzcU63S74o9W4
             },
             controller: _passwordController,
             decoration: const InputDecoration(labelText: 'Passwort'),
+            obscureText: true,
           ),
           /*const SizedBox(height: 8),
           CloudflareTurnstile(
