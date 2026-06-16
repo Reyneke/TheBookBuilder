@@ -144,6 +144,7 @@ class ProviderService extends ChangeNotifier {
     final todoManager = context.read<ProviderBookItems>();
     //resetAllSettings();
     //getOnlineOffline();
+    await loadLastEditedBook();
 
     if (todoManager.headerList.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
@@ -217,10 +218,17 @@ class ProviderService extends ChangeNotifier {
 
   void setNewBookName(String newName, BuildContext context) async {
     final todoManager = context.read<ProviderBookItems>();
+    final prefs = await SharedPreferences.getInstance();
     _currentBook = newName;
+    await prefs.setString(_bookVaultKey, _currentBook);
     notifyListeners();
 
     todoManager.clearHeaderList(true);
+  }
+
+  Future<void> loadLastEditedBook() async {
+    final prefs = await SharedPreferences.getInstance();
+    _currentBook = (prefs.getString(_bookVaultKey) ?? "New Book");
   }
 
   // Alle Einstellungen zurücksetzen

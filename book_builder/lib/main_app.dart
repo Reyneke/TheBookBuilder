@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
@@ -113,12 +111,15 @@ class _MainAppState extends State<MainApp> {
 
                 final newItem2 = ObjBookHeader(
                   id:
-                      (Random().nextInt(
+                      /*(Random().nextInt(
                         DateTime.now().millisecond,
                       ) +
                       Random().nextInt(
                         DateTime.now().millisecond,
-                      )), //(context.read<ProviderBookItems>().headerList.length),
+                      ))*/
+                      context
+                          .read<ProviderBookItems>()
+                          .getRandomKey(), //(context.read<ProviderBookItems>().headerList.length),
                   description: "Leer",
                   title: "Leer",
                   isCompleted: false,
@@ -128,7 +129,7 @@ class _MainAppState extends State<MainApp> {
                   isHeader: true,
                   subTopics: [],
                   headerId: 0,
-                  bookDod: 4500,
+                  bookDod: 0,
                   bookCounter: 0,
                 );
 

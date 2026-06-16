@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:book_builder/objects/obj_book_item.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 
 class ProviderBookItems extends ChangeNotifier {
@@ -63,9 +67,18 @@ class ProviderBookItems extends ChangeNotifier {
     }
   }
 
+  void recalculateDoD(int index, int amount) {
+    getHeaderId(index).bookDod += amount;
+  }
+
+  void recalculateCounter(int index, int amount) {
+    getHeaderId(index).bookCounter += amount;
+  }
+
   void addItemToHeader(int index, ObjBookItem newItem) {
     //_todoList.add(newItem);
     getHeaderId(index).subTopics.add(newItem);
+    recalculateDoD(index, newItem.bookDod);
     notifyListeners();
   }
 
@@ -77,6 +90,7 @@ class ProviderBookItems extends ChangeNotifier {
     );
     if (position >= 0) {
       getHeaderId(index).subTopics.removeAt(position);
+      recalculateDoD(index, -oldItem.bookDod);
       notifyListeners();
     }
   }
@@ -128,25 +142,30 @@ class ProviderBookItems extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateDodCounter(int id, String newCount) {
+  /*void updateDodCounter(int id, String newCount) {
     getHeaderId(id).bookCounter = (int.tryParse(newCount) ?? 0);
     notifyListeners();
-  }
+  }*/
 
   void updateDodCounterItem(int headerId, int id, String newCount) {
-    getBookId(id, getHeaderId(headerId)).bookCounter =
-        (int.tryParse(newCount) ?? 0);
+    int newCounter = (int.tryParse(newCount) ?? 0);
+    int counterValue =
+        newCounter - getBookId(id, getHeaderId(headerId)).bookCounter;
+    getBookId(id, getHeaderId(headerId)).bookCounter = newCounter;
+    recalculateCounter(headerId, counterValue);
     notifyListeners();
   }
 
-  void updateDod(int id, String newCount) {
+  /*void updateDod(int id, String newCount) {
     getHeaderId(id).bookDod = (int.tryParse(newCount) ?? 0);
     notifyListeners();
-  }
+  }*/
 
   void updateDodItem(int headerId, int id, String newCount) {
-    getBookId(id, getHeaderId(headerId)).bookDod =
-        (int.tryParse(newCount) ?? 0);
+    int newDod = (int.tryParse(newCount) ?? 0);
+    int dodValue = newDod - getBookId(id, getHeaderId(headerId)).bookDod;
+    getBookId(id, getHeaderId(headerId)).bookDod = newDod;
+    recalculateDoD(headerId, dodValue);
     notifyListeners();
   }
 
@@ -199,5 +218,18 @@ class ProviderBookItems extends ChangeNotifier {
   void switchSortingOption(ToDoSort newOption) {
     _sortingOption = newOption;
     notifyListeners();
+  }
+
+  int getRandomKey() {
+    int key =
+        (Random().nextInt(
+          DateTime.now().millisecond,
+        ) +
+        Random().nextInt(
+          DateTime.now().millisecond,
+        ));
+    List<int> bytes = utf8.encode(key.toString());
+    Digest sha256Hash = sha256.convert(bytes);
+    return sha256Hash.hashCode;
   }
 }

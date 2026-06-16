@@ -123,23 +123,27 @@ class AppUserData extends StatelessWidget {
           ),
           ListTile(
             leading: Text("Aktuelle Wörter"),
-            title: TextFormField(
-              controller: dodCounterController,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Bitte giben Sie die aktuelle Anzahl von Wörtern ein';
-                }
-                return null;
-              },
-            ),
+            title: isHeader
+                ? Text(
+                    "${context.read<ProviderBookItems>().getHeaderId(index).bookCounter}",
+                  )
+                : TextFormField(
+                    controller: dodCounterController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte giben Sie die aktuelle Anzahl von Wörtern ein';
+                      }
+                      return null;
+                    },
+                  ),
             trailing: IconButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   isHeader
-                      ? context.read<ProviderBookItems>().updateDodCounter(
+                      ? /*context.read<ProviderBookItems>().updateDodCounter(
                           index,
                           dodCounterController.text.trim(),
-                        )
+                        )*/ null
                       : context.read<ProviderBookItems>().updateDodCounterItem(
                           headerIndex,
                           index,
@@ -154,23 +158,27 @@ class AppUserData extends StatelessWidget {
           ),
           ListTile(
             leading: Text("Benötigte Wörter"),
-            title: TextFormField(
-              controller: dodController,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Bitte geben Sie die Wortzielzahl ein';
-                }
-                return null;
-              },
-            ),
+            title: isHeader
+                ? Text(
+                    "${context.read<ProviderBookItems>().getHeaderId(index).bookDod}",
+                  )
+                : TextFormField(
+                    controller: dodController,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte geben Sie die Wortzielzahl ein';
+                      }
+                      return null;
+                    },
+                  ),
             trailing: IconButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   isHeader
-                      ? context.read<ProviderBookItems>().updateDod(
+                      ? /*context.read<ProviderBookItems>().updateDod(
                           index,
                           dodController.text.trim(),
-                        )
+                        )*/ null
                       : context.read<ProviderBookItems>().updateDodItem(
                           headerIndex,
                           index,

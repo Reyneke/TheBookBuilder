@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:book_builder/providers/provider_book_items.dart';
 import 'package:book_builder/providers/provider_service.dart';
@@ -32,12 +30,13 @@ class ToDoListElement extends StatelessWidget {
                   listItem.id,
                   ObjBookItem(
                     id:
-                        (Random().nextInt(
+                        /*(Random().nextInt(
                           DateTime.now().millisecond,
                         ) +
                         Random().nextInt(
                           DateTime.now().millisecond,
-                        )),
+                        ))*/
+                        context.read<ProviderBookItems>().getRandomKey(),
                     /*context
                         .read<ProviderBookItems>()
                         .headerList[listItem.id]
@@ -63,7 +62,7 @@ class ToDoListElement extends StatelessWidget {
           : Image.asset(imageNotDone),
       title: isHeader
           ? Text(
-              listItem.title,
+              "${listItem.title} - ${listItem.bookCounter} / ${listItem.bookDod}",
               style: AppTheme.baseTextTheme.headlineSmall,
             )
           : Text(
