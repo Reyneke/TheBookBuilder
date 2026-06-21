@@ -6,11 +6,28 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 
 class ProviderBookItems extends ChangeNotifier {
-  //final List<ObjBookItem> _todoList = [];
-  //List<ObjBookItem> get todoList => _todoList;
+  /// Flat list of ALL items (headers and subtopics) stored linewise.
+  /// Each item is an independent "line." Headers and their subtopics are
+  /// linked via [ObjBookItem.headerId] rather than object nesting.
+  final List<ObjBookItem> _allItems = [];
 
-  final List<ObjBookHeader> _headerList = [];
-  List<ObjBookHeader> get headerList => _headerList;
+  // ---------------------------------------------------------------------------
+  // Getters
+  // ---------------------------------------------------------------------------
+
+  /// Returns all items (flat list).
+  List<ObjBookItem> get allItems => List.unmodifiable(_allItems);
+
+  /// Returns only header items.
+  List<ObjBookHeader> get headerList =>
+      _allItems.whereType<ObjBookHeader>().toList();
+
+  /// Returns all subtopics (non-header items) for the given header id.
+  List<ObjBookItem> getSubtopicsForHeader(int headerId) {
+    return _allItems
+        .where((item) => !item.isHeader && item.headerId == headerId)
+        .toList();
+  }
 
   final Set<ToDoFilter> _filters = <ToDoFilter>{ToDoFilter.alle};
   Set<ToDoFilter> get filters => _filters;
@@ -21,50 +38,71 @@ class ProviderBookItems extends ChangeNotifier {
   ToDoSort _sortingOption = ToDoSort.prioritaet;
   ToDoSort get sortingOption => _sortingOption;
 
-  //TODO remove
-  /*int getToDoItems() {
-    return _todoList.length;
+  // ---------------------------------------------------------------------------
+  // Lookup helpers
+  // ---------------------------------------------------------------------------
+
+  int getItemPosition(List<ObjBookItem> list, ObjBookItem oldItem) {
+    return list.indexWhere((element) => element.id == oldItem.id);
   }
 
-  void addItem(ObjBookItem newItem) {
-    _todoList.add(newItem);
-    notifyListeners();
+  /// Finds any item by its [id].
+  ObjBookItem getItemById(int id) {
+    return _allItems.singleWhere((element) => element.id == id);
   }
 
-  void removeItem(ObjBookItem oldItem) {
-    _todoList.remove(oldItem);
-    notifyListeners();
-  }*/
-
-  int getItemPosition(List<ObjBookItem> index, ObjBookItem oldItem) {
-    return index.indexWhere((element) => element.id == oldItem.id);
-  }
-
+  /// Finds a header by its [id].
   ObjBookHeader getHeaderId(int id) {
-    return _headerList.singleWhere((element) => element.id == id);
+    return _allItems.singleWhere(
+          (element) => element.id == id && element.isHeader,
+        )
+        as ObjBookHeader;
   }
 
+  /// Finds a subtopic by its [id] within the given [header].
+  /// Note: the [header] parameter is kept for backwards compatibility but
+  /// lookup is now done from the flat list.
   ObjBookItem getBookId(int id, ObjBookHeader header) {
-    return header.subTopics.singleWhere((element) => element.id == id);
+    return _allItems.singleWhere((element) => element.id == id);
   }
 
-  /*void clearList() {
-    _todoList.clear();
+  // ---------------------------------------------------------------------------
+  // Mutators – linewise (single item at a time)
+  // ---------------------------------------------------------------------------
+
+  /// Adds a single item (header or subtopic) to the flat list.
+  void addItem(ObjBookItem newItem) {
+    _allItems.add(newItem);
     notifyListeners();
-  }*/
+  }
+
+  /// Removes a single item from the flat list.
+  void removeItem(ObjBookItem oldItem) {
+    _allItems.remove(oldItem);
+    notifyListeners();
+  }
+
+  /// Adds a header and all its subtopics from the legacy nested structure.
+  /// Used when loading old data that still uses the nested [subTopics] list.
+  void addHeaderWithSubtopics(ObjBookHeader header) {
+    _allItems.add(header);
+    for (var sub in header.subTopics) {
+      _allItems.add(sub);
+    }
+    notifyListeners();
+  }
 
   void addHeader(ObjBookHeader newHeader) {
-    _headerList.add(newHeader);
+    // Flatten: only add the header itself, not its subTopics (they should be
+    // added individually via [addItem] or [addItemToHeader]).
+    _allItems.add(newHeader);
     notifyListeners();
   }
 
   void removeHeader(ObjBookHeader oldHeader) {
-    final position = getItemPosition(_headerList, oldHeader);
-    if (position >= 0) {
-      oldHeader.subTopics.clear();
-      _headerList.removeAt(position);
-      notifyListeners();
-    }
+    _allItems.removeWhere((item) => item.headerId == oldHeader.id);
+    _allItems.remove(oldHeader);
+    notifyListeners();
   }
 
   void recalculateDoD(int index, int amount) {
@@ -75,60 +113,53 @@ class ProviderBookItems extends ChangeNotifier {
     getHeaderId(index).bookCounter += amount;
   }
 
-  void addItemToHeader(int index, ObjBookItem newItem) {
-    //_todoList.add(newItem);
-    getHeaderId(index).subTopics.add(newItem);
-    recalculateDoD(index, newItem.bookDod);
+  void addItemToHeader(int headerId, ObjBookItem newItem) {
+    _allItems.add(newItem);
+    recalculateDoD(headerId, newItem.bookDod);
     notifyListeners();
   }
 
-  void removeItemFromHeader(int index, ObjBookItem oldItem) {
-    //_todoList.remove(oldItem);
-    final position = getItemPosition(
-      getHeaderId(index).subTopics,
-      oldItem,
-    );
-    if (position >= 0) {
-      getHeaderId(index).subTopics.removeAt(position);
-      recalculateDoD(index, -oldItem.bookDod);
-      notifyListeners();
-    }
+  void removeItemFromHeader(int headerId, ObjBookItem oldItem) {
+    _allItems.remove(oldItem);
+    recalculateDoD(headerId, -oldItem.bookDod);
+    notifyListeners();
   }
 
   void clearHeaderList(bool getNotifyListeners) {
-    _headerList.clear();
-
+    _allItems.clear();
     if (getNotifyListeners) {
       notifyListeners();
     }
   }
 
-  void clearAllItemsFromHeader(int index) {
-    getHeaderId(index).subTopics.clear();
+  void clearAllItemsFromHeader(int headerId) {
+    _allItems.removeWhere(
+      (item) => item.headerId == headerId && !item.isHeader,
+    );
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------------------
+  // Field updaters
+  // ---------------------------------------------------------------------------
+
   void updateCompletion(int id, bool newState) {
-    //_todoList[id].isCompleted = newState;
     getHeaderId(id).isCompleted = newState;
     notifyListeners();
   }
 
   void updateCompletionItem(int headerId, int id, bool newState) {
-    //_todoList[id].isCompleted = newState;
-    getBookId(id, getHeaderId(headerId)).isCompleted = newState;
+    getItemById(id).isCompleted = newState;
     notifyListeners();
   }
 
   void updateTitle(int id, String newTitle) {
     getHeaderId(id).title = newTitle;
-    //_headerList[id].title = newTitle;
     notifyListeners();
   }
 
   void updateTitleItem(int headerId, int id, String newTitle) {
-    getBookId(id, getHeaderId(headerId)).title = newTitle;
-    //_headerList[headerId].subTopics[id].title = newTitle;
+    getItemById(id).title = newTitle;
     notifyListeners();
   }
 
@@ -138,33 +169,24 @@ class ProviderBookItems extends ChangeNotifier {
   }
 
   void updateDescriptionItem(int headerId, int id, String newDesc) {
-    getBookId(id, getHeaderId(headerId)).description = newDesc;
+    getItemById(id).description = newDesc;
     notifyListeners();
   }
 
-  /*void updateDodCounter(int id, String newCount) {
-    getHeaderId(id).bookCounter = (int.tryParse(newCount) ?? 0);
-    notifyListeners();
-  }*/
-
   void updateDodCounterItem(int headerId, int id, String newCount) {
     int newCounter = (int.tryParse(newCount) ?? 0);
-    int counterValue =
-        newCounter - getBookId(id, getHeaderId(headerId)).bookCounter;
-    getBookId(id, getHeaderId(headerId)).bookCounter = newCounter;
+    final item = getItemById(id);
+    int counterValue = newCounter - item.bookCounter;
+    item.bookCounter = newCounter;
     recalculateCounter(headerId, counterValue);
     notifyListeners();
   }
 
-  /*void updateDod(int id, String newCount) {
-    getHeaderId(id).bookDod = (int.tryParse(newCount) ?? 0);
-    notifyListeners();
-  }*/
-
   void updateDodItem(int headerId, int id, String newCount) {
     int newDod = (int.tryParse(newCount) ?? 0);
-    int dodValue = newDod - getBookId(id, getHeaderId(headerId)).bookDod;
-    getBookId(id, getHeaderId(headerId)).bookDod = newDod;
+    final item = getItemById(id);
+    int dodValue = newDod - item.bookDod;
+    item.bookDod = newDod;
     recalculateDoD(headerId, dodValue);
     notifyListeners();
   }
@@ -175,7 +197,7 @@ class ProviderBookItems extends ChangeNotifier {
   }
 
   void updatePriorityItem(int headerId, int id, Priority newPriority) {
-    getBookId(id, getHeaderId(headerId)).priority = newPriority;
+    getItemById(id).priority = newPriority;
     notifyListeners();
   }
 
@@ -185,9 +207,13 @@ class ProviderBookItems extends ChangeNotifier {
   }
 
   void updateCompletionDateItem(int headerId, int id, DateTime newDate) {
-    getBookId(id, getHeaderId(headerId)).dueDate = newDate;
+    getItemById(id).dueDate = newDate;
     notifyListeners();
   }
+
+  // ---------------------------------------------------------------------------
+  // Filters / Sorting
+  // ---------------------------------------------------------------------------
 
   void addFilter(ToDoFilter newFilter) {
     _filters.add(newFilter);

@@ -17,15 +17,17 @@ class ScreenTodo extends StatefulWidget {
 class _ScreenTodoState extends State<ScreenTodo> {
   List<ObjBookItem> getCondensedList() {
     List<ObjBookItem> condensedList = [];
+    final todoManager = context.read<ProviderBookItems>();
 
-    for (var header in context.read<ProviderBookItems>().headerList) {
+    for (var header in todoManager.headerList) {
       condensedList.add(header);
-      for (var topic in header.subTopics) {
+      final subtopics = todoManager.getSubtopicsForHeader(header.id);
+      for (var topic in subtopics) {
         condensedList.add(topic);
       }
 
-      if (header.subTopics.isNotEmpty) {
-        sortFilteredList(header.subTopics, context.read<ProviderBookItems>());
+      if (subtopics.isNotEmpty) {
+        sortFilteredList(subtopics, todoManager);
       }
     }
 
@@ -36,13 +38,8 @@ class _ScreenTodoState extends State<ScreenTodo> {
   Widget build(BuildContext context) {
     final todoManager = context.watch<ProviderBookItems>();
     final filteredList = getCondensedList().where((element) {
-      //todoManager.todoList.where((element) {
       return getFilteredList(todoManager, element);
     }).toList();
-
-    /*if (filteredList.isNotEmpty) {
-      sortFilteredList(filteredList, todoManager);
-    }*/
 
     if (filteredList.isEmpty) {
       return Center(
@@ -51,7 +48,7 @@ class _ScreenTodoState extends State<ScreenTodo> {
     }
 
     return ListView.builder(
-      itemCount: filteredList.length, //todoManager.todoList.length,
+      itemCount: filteredList.length,
       itemBuilder: (context, index) {
         final listItem = filteredList[index];
         return Dismissible(
@@ -65,9 +62,6 @@ class _ScreenTodoState extends State<ScreenTodo> {
             );
           },
           onDismissed: (direction) {
-            //context.read<ProviderToDo>().removeItem(listItem);
-            //context.read<ProviderService>().removeFromList(context, listItem);
-
             setState(() {
               filteredList.removeAt(index);
             });
@@ -83,10 +77,6 @@ class _ScreenTodoState extends State<ScreenTodo> {
               context.read<ProviderService>().saveToDoList(context);
             }
 
-            //context.read<ProviderService>().saveToDoList(context);
-            //context.read<ProviderService>().removeFromList(context, listItem);
-
-            // Then show a snackbar.
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(

@@ -56,41 +56,35 @@ class ProviderService extends ChangeNotifier {
     }
   }
 
+  /// Saves EVERY item (header + subtopic) individually as its own "line"
+  /// in the key-value store (SharedPreferences or Supabase).
   void saveToDoList(BuildContext context) async {
     final todoManager = context.read<ProviderBookItems>();
-    if (todoManager.headerList.isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      /*Map<String, */
-      //Map<String, dynamic> /*>*/ bookLines = {};
-      //bookLines/*[currentBook]*/ = {};
+    final prefs = await SharedPreferences.getInstance();
 
-      //Save all keys
-      for (var toDoItem in todoManager.headerList) {
-        final String key =
-            toDoItem.id.toString() +
-            //toDoItem.title +
-            toDoItem.createdAt.toIso8601String();
-        final toDoMap = toDoItem.toMap();
+    if (todoManager.allItems.isEmpty) return;
 
-        if (!getUseOnlineDB) {
-          await prefs.setString(key, jsonEncode(toDoMap));
-        } else {
-          //bookLines[key] = jsonEncode(toDoMap);
-          List<int> bytes = utf8.encode(key);
-          Digest sha256Hash = sha256.convert(bytes);
-          await upsertBook({
-            'id': toDoItem.id /*sha256Hash.hashCode*/,
-            'titel': currentBook,
-            'team': userGroup,
-            'chapters': jsonEncode(toDoMap),
-          });
-        }
+    for (var item in todoManager.allItems) {
+      final String key = item.id.toString() + item.createdAt.toIso8601String();
+      final itemMap = item.toMap();
 
-        //Add new keys
-        if (!_keyRing.contains(key)) {
-          _keyRing.add(key);
-          await prefs.setString(_serviceKeys, _keyRing.join(" "));
-        }
+      if (!getUseOnlineDB) {
+        await prefs.setString(key, jsonEncode(itemMap));
+      } else {
+        List<int> bytes = utf8.encode(key);
+        Digest sha256Hash = sha256.convert(bytes);
+        await upsertBook({
+          'id': item.id,
+          'titel': currentBook,
+          'team': userGroup,
+          'chapters': jsonEncode(itemMap),
+        });
+      }
+
+      // Add new keys
+      if (!_keyRing.contains(key)) {
+        _keyRing.add(key);
+        await prefs.setString(_serviceKeys, _keyRing.join(" "));
       }
     }
   }
@@ -99,12 +93,7 @@ class ProviderService extends ChangeNotifier {
     final supabase = Supabase.instance.client;
 
     try {
-      await supabase
-          .from('books')
-          .delete()
-          .eq('id', bookId); // Löscht das Buch mit dieser ID
-
-      //print('Buch erfolgreich gelöscht');
+      await supabase.from('books').delete().eq('id', bookId);
     } catch (error) {
       //print('Fehler beim Löschen: $error');
     }
@@ -113,29 +102,44 @@ class ProviderService extends ChangeNotifier {
   void removeFromList(BuildContext context, ObjBookItem deletedObject) async {
     final todoManager = context.read<ProviderBookItems>();
 
-    if (todoManager.headerList.isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
+    if (todoManager.allItems.isEmpty) return;
 
-      //for (var toDoItem in todoManager.todoList) {
-      final String key =
-          deletedObject.id.toString() +
-          deletedObject.createdAt.toIso8601String();
+    final prefs = await SharedPreferences.getInstance();
 
-      if (_keyRing.contains(key)) {
-        _keyRing.remove(key);
-        await prefs.setString(_serviceKeys, _keyRing.join(" "));
-      }
-
-      if (getUseOnlineDB) {
-        List<int> bytes = utf8.encode(key);
-        Digest sha256Hash = sha256.convert(bytes);
-        await deleteItem(/*sha256Hash.hashCode*/ deletedObject.id);
-      } else {
-        if (prefs.containsKey(key)) {
-          prefs.remove(key);
+    // If it's a header, remove all its subtopics too.
+    if (deletedObject.isHeader) {
+      final subtopics = todoManager.getSubtopicsForHeader(deletedObject.id);
+      for (var sub in subtopics) {
+        final String subKey =
+            sub.id.toString() + sub.createdAt.toIso8601String();
+        if (_keyRing.contains(subKey)) {
+          _keyRing.remove(subKey);
+          await prefs.setString(_serviceKeys, _keyRing.join(" "));
+        }
+        if (getUseOnlineDB) {
+          await deleteItem(sub.id);
+        } else {
+          if (prefs.containsKey(subKey)) {
+            prefs.remove(subKey);
+          }
         }
       }
-      //}
+    }
+
+    final String key =
+        deletedObject.id.toString() + deletedObject.createdAt.toIso8601String();
+
+    if (_keyRing.contains(key)) {
+      _keyRing.remove(key);
+      await prefs.setString(_serviceKeys, _keyRing.join(" "));
+    }
+
+    if (getUseOnlineDB) {
+      await deleteItem(deletedObject.id);
+    } else {
+      if (prefs.containsKey(key)) {
+        prefs.remove(key);
+      }
     }
   }
 
@@ -146,7 +150,7 @@ class ProviderService extends ChangeNotifier {
     //getOnlineOffline();
     await loadLastEditedBook();
 
-    if (todoManager.headerList.isEmpty) {
+    if (todoManager.allItems.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
       final keyStrings = (prefs.getString(_serviceKeys) ?? "");
       final subKeysString = keyStrings.split(" ");
@@ -156,9 +160,15 @@ class ProviderService extends ChangeNotifier {
 
         if (_bookdata.isNotEmpty) {
           for (var item in _bookdata) {
-            final toDoMap = jsonDecode(item['chapters']);
-            final todoListItem = ObjBookHeader.fromMapWithDefaults(toDoMap);
-            todoManager.addHeader(todoListItem);
+            final itemMap = jsonDecode(item['chapters']);
+            final isHeader = itemMap['isHeader'] == true;
+            if (isHeader) {
+              final headerItem = ObjBookHeader.fromMapWithDefaults(itemMap);
+              todoManager.addHeaderWithSubtopics(headerItem);
+            } else {
+              final todoListItem = ObjBookItem.fromMapWithDefaults(itemMap);
+              todoManager.addItem(todoListItem);
+            }
           }
           for (var key in subKeysString) {
             _keyRing.add(key);
@@ -166,12 +176,17 @@ class ProviderService extends ChangeNotifier {
         }
       } else {
         for (var key in subKeysString) {
-          final toDoString = (prefs.getString(key));
-          if (toDoString != null) {
-            final toDoMap = jsonDecode(toDoString);
-            final todoListItem = ObjBookHeader.fromMapWithDefaults(toDoMap);
-            todoManager.addHeader(todoListItem);
-            // .addItem(todoListItem);
+          final itemString = (prefs.getString(key));
+          if (itemString != null) {
+            final itemMap = jsonDecode(itemString);
+            final isHeader = itemMap['isHeader'] == true;
+            if (isHeader) {
+              final headerItem = ObjBookHeader.fromMapWithDefaults(itemMap);
+              todoManager.addHeaderWithSubtopics(headerItem);
+            } else {
+              final todoListItem = ObjBookItem.fromMapWithDefaults(itemMap);
+              todoManager.addItem(todoListItem);
+            }
             _keyRing.add(key);
           }
         }
@@ -254,7 +269,7 @@ class ProviderService extends ChangeNotifier {
     if (newStatus != _getUseOnlineDB) {
       _getUseOnlineDB = newStatus;
       //await prefs.setBool(_offlineKey, newStatus);
-      if (todoManager.headerList.isNotEmpty) {
+      if (todoManager.allItems.isNotEmpty) {
         todoManager.clearHeaderList(false);
       }
     }
