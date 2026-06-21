@@ -22,12 +22,11 @@ class _ScreenTodoState extends State<ScreenTodo> {
     for (var header in todoManager.headerList) {
       condensedList.add(header);
       final subtopics = todoManager.getSubtopicsForHeader(header.id);
-      for (var topic in subtopics) {
-        condensedList.add(topic);
-      }
-
       if (subtopics.isNotEmpty) {
         sortFilteredList(subtopics, todoManager);
+      }
+      for (var topic in subtopics) {
+        condensedList.add(topic);
       }
     }
 
