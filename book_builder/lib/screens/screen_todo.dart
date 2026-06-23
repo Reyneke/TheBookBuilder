@@ -164,12 +164,20 @@ class _ScreenTodoState extends State<ScreenTodo> {
     BuildContext context,
     ObjBookItem listItem,
     int index,
-  ) {
+  ) async {
+    final serviceController = context.read<ProviderService>();
+    final bookId = listItem.id;
+
+    // Acquire lock before opening the bottom sheet
+    final lockAcquired = await serviceController.acquireLock(bookId);
+    final isLocked = lockAcquired == false;
+
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (BuildContext context) {
-        ProviderService serviceController = context.watch<ProviderService>();
+        ProviderService sheetServiceController = context
+            .watch<ProviderService>();
         TextEditingController titelController = TextEditingController();
         TextEditingController descriptionController = TextEditingController();
         final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -180,13 +188,18 @@ class _ScreenTodoState extends State<ScreenTodo> {
         return AppUserData(
           formKey: formKey,
           titelController: titelController,
-          serviceController: serviceController,
+          serviceController: sheetServiceController,
           descriptionController: descriptionController,
           index: index,
           isHeader: listItem.isHeader,
           headerIndex: listItem.headerId,
+          listItem: listItem,
+          isLocked: isLocked,
         );
       },
-    );
+    ).then((_) {
+      // Release lock when bottom sheet is dismissed
+      serviceController.releaseLock(bookId);
+    });
   }
 }

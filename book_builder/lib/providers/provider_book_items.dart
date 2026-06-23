@@ -3,31 +3,12 @@ import 'dart:math';
 
 import 'package:book_builder/objects/obj_book_item.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class ProviderBookItems extends ChangeNotifier {
-  /// Flat list of ALL items (headers and subtopics) stored linewise.
-  /// Each item is an independent "line." Headers and their subtopics are
-  /// linked via [ObjBookItem.headerId] rather than object nesting.
-  final List<ObjBookItem> _allItems = [];
-
-  // ---------------------------------------------------------------------------
-  // Getters
-  // ---------------------------------------------------------------------------
-
-  /// Returns all items (flat list).
-  List<ObjBookItem> get allItems => List.unmodifiable(_allItems);
-
-  /// Returns only header items.
-  List<ObjBookHeader> get headerList =>
-      _allItems.whereType<ObjBookHeader>().toList();
-
-  /// Returns all subtopics (non-header items) for the given header id.
-  List<ObjBookItem> getSubtopicsForHeader(int headerId) {
-    return _allItems
-        .where((item) => !item.isHeader && item.headerId == headerId)
-        .toList();
-  }
+  final List<ObjBookHeader> _headerList = [];
+  List<ObjBookHeader> get headerList => _headerList;
 
   final Set<ToDoFilter> _filters = <ToDoFilter>{ToDoFilter.alle};
   Set<ToDoFilter> get filters => _filters;
@@ -38,182 +19,309 @@ class ProviderBookItems extends ChangeNotifier {
   ToDoSort _sortingOption = ToDoSort.prioritaet;
   ToDoSort get sortingOption => _sortingOption;
 
-  // ---------------------------------------------------------------------------
-  // Lookup helpers
-  // ---------------------------------------------------------------------------
+  // ── Dirty-Tracking für inkrementelle Speicherung ─────────────
+  final Set<int> _dirtyHeaderIds = <int>{};
+  final Set<String> _dirtySubTopicKeys = <String>{};
 
-  int getItemPosition(List<ObjBookItem> list, ObjBookItem oldItem) {
-    return list.indexWhere((element) => element.id == oldItem.id);
+  bool get hasDirtyItems =>
+      _dirtyHeaderIds.isNotEmpty || _dirtySubTopicKeys.isNotEmpty;
+
+  void markHeaderDirty(int headerId) {
+    _dirtyHeaderIds.add(headerId);
+    notifyListeners();
   }
 
-  /// Finds any item by its [id].
-  ObjBookItem getItemById(int id) {
-    return _allItems.singleWhere((element) => element.id == id);
+  void markSubTopicDirty(int headerId, int subTopicId) {
+    _dirtySubTopicKeys.add('${headerId}_$subTopicId');
+    notifyListeners();
   }
 
-  /// Finds a header by its [id].
+  void clearDirtyFlags() {
+    _dirtyHeaderIds.clear();
+    _dirtySubTopicKeys.clear();
+    notifyListeners();
+  }
+
+  Set<int> get dirtyHeaderIds => Set.unmodifiable(_dirtyHeaderIds);
+  Set<String> get dirtySubTopicKeys => Set.unmodifiable(_dirtySubTopicKeys);
+
+  // ── Hilfsmethoden ─────────────────────────────────────────────
+
+  int getItemPosition(List<ObjBookItem> index, ObjBookItem oldItem) {
+    return index.indexWhere((element) => element.id == oldItem.id);
+  }
+
   ObjBookHeader getHeaderId(int id) {
-    return _allItems.singleWhere(
-          (element) => element.id == id && element.isHeader,
-        )
-        as ObjBookHeader;
-  }
-
-  /// Finds a subtopic by its [id] within the given [header].
-  /// Note: the [header] parameter is kept for backwards compatibility but
-  /// lookup is now done from the flat list.
-  ObjBookItem getBookId(int id, ObjBookHeader header) {
-    return _allItems.singleWhere((element) => element.id == id);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Mutators – linewise (single item at a time)
-  // ---------------------------------------------------------------------------
-
-  /// Adds a single item (header or subtopic) to the flat list.
-  void addItem(ObjBookItem newItem) {
-    _allItems.add(newItem);
-    notifyListeners();
-  }
-
-  /// Removes a single item from the flat list.
-  void removeItem(ObjBookItem oldItem) {
-    _allItems.remove(oldItem);
-    notifyListeners();
-  }
-
-  /// Adds a header and all its subtopics from the legacy nested structure.
-  /// Used when loading old data that still uses the nested [subTopics] list.
-  void addHeaderWithSubtopics(ObjBookHeader header) {
-    _allItems.add(header);
-    for (var sub in header.subTopics) {
-      _allItems.add(sub);
+    try {
+      return _headerList.singleWhere((element) => element.id == id);
+    } catch (e) {
+      throw StateError(
+        'Header mit ID $id wurde nicht gefunden (${_headerList.length} Header vorhanden)',
+      );
     }
-    notifyListeners();
   }
+
+  ObjBookItem getBookId(int id, ObjBookHeader header) {
+    try {
+      return header.subTopics.singleWhere((element) => element.id == id);
+    } catch (e) {
+      throw StateError(
+        'BookItem mit ID $id wurde im Header ${header.id} nicht gefunden '
+        '(${header.subTopics.length} Items vorhanden)',
+      );
+    }
+  }
+
+  List<ObjBookItem> getSubtopicsForHeader(int headerId) {
+    try {
+      final header = getHeaderId(headerId);
+      return List<ObjBookItem>.from(header.subTopics);
+    } catch (e) {
+      debugPrint(
+        'getSubtopicsForHeader fehlgeschlagen für headerId $headerId: $e',
+      );
+      return const [];
+    }
+  }
+
+  // ── Header-Operationen ────────────────────────────────────────
 
   void addHeader(ObjBookHeader newHeader) {
-    // Flatten: only add the header itself, not its subTopics (they should be
-    // added individually via [addItem] or [addItemToHeader]).
-    _allItems.add(newHeader);
+    final existingIndex = _headerList.indexWhere(
+      (element) => element.id == newHeader.id,
+    );
+    if (existingIndex >= 0) {
+      debugPrint(
+        'addHeader: Header mit ID ${newHeader.id} existiert bereits, übersprungen',
+      );
+      return;
+    }
+    _headerList.add(newHeader);
+    markHeaderDirty(newHeader.id);
     notifyListeners();
   }
 
   void removeHeader(ObjBookHeader oldHeader) {
-    _allItems.removeWhere((item) => item.headerId == oldHeader.id);
-    _allItems.remove(oldHeader);
-    notifyListeners();
+    final position = getItemPosition(_headerList, oldHeader);
+    if (position >= 0) {
+      oldHeader.subTopics.clear();
+      _headerList.removeAt(position);
+      _dirtyHeaderIds.remove(oldHeader.id);
+      notifyListeners();
+    } else {
+      debugPrint('removeHeader: Header mit ID ${oldHeader.id} nicht gefunden');
+    }
   }
 
   void recalculateDoD(int index, int amount) {
-    getHeaderId(index).bookDod += amount;
+    try {
+      getHeaderId(index).bookDod += amount;
+    } catch (e) {
+      debugPrint('recalculateDoD fehlgeschlagen für index $index: $e');
+    }
   }
 
   void recalculateCounter(int index, int amount) {
-    getHeaderId(index).bookCounter += amount;
+    try {
+      getHeaderId(index).bookCounter += amount;
+    } catch (e) {
+      debugPrint('recalculateCounter fehlgeschlagen für index $index: $e');
+    }
   }
 
-  void addItemToHeader(int headerId, ObjBookItem newItem) {
-    _allItems.add(newItem);
-    recalculateDoD(headerId, newItem.bookDod);
-    notifyListeners();
+  void addItemToHeader(int index, ObjBookItem newItem) {
+    try {
+      final header = getHeaderId(index);
+      header.subTopics.add(newItem);
+      recalculateDoD(index, newItem.bookDod);
+      markHeaderDirty(index);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('addItemToHeader fehlgeschlagen für index $index: $e');
+    }
   }
 
-  void removeItemFromHeader(int headerId, ObjBookItem oldItem) {
-    _allItems.remove(oldItem);
-    recalculateDoD(headerId, -oldItem.bookDod);
-    notifyListeners();
+  void removeItemFromHeader(int index, ObjBookItem oldItem) {
+    try {
+      final header = getHeaderId(index);
+      final position = getItemPosition(header.subTopics, oldItem);
+      if (position >= 0) {
+        header.subTopics.removeAt(position);
+        recalculateDoD(index, -oldItem.bookDod);
+        markHeaderDirty(index);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('removeItemFromHeader fehlgeschlagen für index $index: $e');
+    }
   }
 
   void clearHeaderList(bool getNotifyListeners) {
-    _allItems.clear();
+    _headerList.clear();
+    _dirtyHeaderIds.clear();
+    _dirtySubTopicKeys.clear();
+
     if (getNotifyListeners) {
       notifyListeners();
     }
   }
 
-  void clearAllItemsFromHeader(int headerId) {
-    _allItems.removeWhere(
-      (item) => item.headerId == headerId && !item.isHeader,
-    );
-    notifyListeners();
+  void clearAllItemsFromHeader(int index) {
+    try {
+      getHeaderId(index).subTopics.clear();
+      markHeaderDirty(index);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('clearAllItemsFromHeader fehlgeschlagen für index $index: $e');
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Field updaters
-  // ---------------------------------------------------------------------------
+  // ── Update-Operationen (mit Dirty-Tracking) ──────────────────
 
   void updateCompletion(int id, bool newState) {
-    getHeaderId(id).isCompleted = newState;
-    notifyListeners();
+    try {
+      getHeaderId(id).isCompleted = newState;
+      markHeaderDirty(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('updateCompletion fehlgeschlagen für id $id: $e');
+    }
   }
 
   void updateCompletionItem(int headerId, int id, bool newState) {
-    getItemById(id).isCompleted = newState;
-    notifyListeners();
+    try {
+      final header = getHeaderId(headerId);
+      getBookId(id, header).isCompleted = newState;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateCompletionItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updateTitle(int id, String newTitle) {
-    getHeaderId(id).title = newTitle;
-    notifyListeners();
+    try {
+      getHeaderId(id).title = newTitle;
+      markHeaderDirty(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('updateTitle fehlgeschlagen für id $id: $e');
+    }
   }
 
   void updateTitleItem(int headerId, int id, String newTitle) {
-    getItemById(id).title = newTitle;
-    notifyListeners();
+    try {
+      getBookId(id, getHeaderId(headerId)).title = newTitle;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateTitleItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updateDescription(int id, String newDesc) {
-    getHeaderId(id).description = newDesc;
-    notifyListeners();
+    try {
+      getHeaderId(id).description = newDesc;
+      markHeaderDirty(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('updateDescription fehlgeschlagen für id $id: $e');
+    }
   }
 
   void updateDescriptionItem(int headerId, int id, String newDesc) {
-    getItemById(id).description = newDesc;
-    notifyListeners();
+    try {
+      getBookId(id, getHeaderId(headerId)).description = newDesc;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateDescriptionItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updateDodCounterItem(int headerId, int id, String newCount) {
-    int newCounter = (int.tryParse(newCount) ?? 0);
-    final item = getItemById(id);
-    int counterValue = newCounter - item.bookCounter;
-    item.bookCounter = newCounter;
-    recalculateCounter(headerId, counterValue);
-    notifyListeners();
+    try {
+      int newCounter = (int.tryParse(newCount) ?? 0);
+      final item = getBookId(id, getHeaderId(headerId));
+      int counterValue = newCounter - item.bookCounter;
+      item.bookCounter = newCounter;
+      recalculateCounter(headerId, counterValue);
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateDodCounterItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updateDodItem(int headerId, int id, String newCount) {
-    int newDod = (int.tryParse(newCount) ?? 0);
-    final item = getItemById(id);
-    int dodValue = newDod - item.bookDod;
-    item.bookDod = newDod;
-    recalculateDoD(headerId, dodValue);
-    notifyListeners();
+    try {
+      int newDod = (int.tryParse(newCount) ?? 0);
+      final item = getBookId(id, getHeaderId(headerId));
+      int dodValue = newDod - item.bookDod;
+      item.bookDod = newDod;
+      recalculateDoD(headerId, dodValue);
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateDodItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updatePriority(int id, Priority newPriority) {
-    getHeaderId(id).priority = newPriority;
-    notifyListeners();
+    try {
+      getHeaderId(id).priority = newPriority;
+      markHeaderDirty(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('updatePriority fehlgeschlagen für id $id: $e');
+    }
   }
 
   void updatePriorityItem(int headerId, int id, Priority newPriority) {
-    getItemById(id).priority = newPriority;
-    notifyListeners();
+    try {
+      getBookId(id, getHeaderId(headerId)).priority = newPriority;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updatePriorityItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
   void updateCompletionDate(int id, DateTime newDate) {
-    getHeaderId(id).dueDate = newDate;
-    notifyListeners();
+    try {
+      getHeaderId(id).dueDate = newDate;
+      markHeaderDirty(id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('updateCompletionDate fehlgeschlagen für id $id: $e');
+    }
   }
 
   void updateCompletionDateItem(int headerId, int id, DateTime newDate) {
-    getItemById(id).dueDate = newDate;
-    notifyListeners();
+    try {
+      getBookId(id, getHeaderId(headerId)).dueDate = newDate;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateCompletionDateItem fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Filters / Sorting
-  // ---------------------------------------------------------------------------
+  // ── Filter & Sortierung ──────────────────────────────────────
 
   void addFilter(ToDoFilter newFilter) {
     _filters.add(newFilter);
@@ -237,7 +345,7 @@ class ProviderBookItems extends ChangeNotifier {
 
   void cleanFilters() {
     _filters.clear();
-    _priofilter.clear;
+    _priofilter.clear();
     notifyListeners();
   }
 
@@ -248,12 +356,8 @@ class ProviderBookItems extends ChangeNotifier {
 
   int getRandomKey() {
     int key =
-        (Random().nextInt(
-          DateTime.now().millisecond,
-        ) +
-        Random().nextInt(
-          DateTime.now().millisecond,
-        ));
+        (Random().nextInt(DateTime.now().millisecond) +
+        Random().nextInt(DateTime.now().millisecond));
     List<int> bytes = utf8.encode(key.toString());
     Digest sha256Hash = sha256.convert(bytes);
     return sha256Hash.hashCode;
