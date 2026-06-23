@@ -15,6 +15,8 @@ class AppUserData extends StatelessWidget {
     required this.index,
     required this.isHeader,
     required this.headerIndex,
+    required this.listItem,
+    this.isLocked = false,
   });
 
   final GlobalKey<FormState> formKey;
@@ -24,6 +26,8 @@ class AppUserData extends StatelessWidget {
   final int index;
   final bool isHeader;
   final int headerIndex;
+  final ObjBookItem listItem;
+  final bool isLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -76,21 +80,23 @@ class AppUserData extends StatelessWidget {
               },
             ),
             trailing: IconButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  isHeader
-                      ? context.read<ProviderBookItems>().updateTitle(
-                          index,
-                          titelController.text.trim(),
-                        )
-                      : context.read<ProviderBookItems>().updateTitleItem(
-                          headerIndex,
-                          index,
-                          titelController.text.trim(),
-                        );
-                  serviceController.saveToDoList(context);
-                }
-              },
+              onPressed: isLocked
+                  ? null
+                  : () {
+                      if (formKey.currentState!.validate()) {
+                        isHeader
+                            ? context.read<ProviderBookItems>().updateTitle(
+                                index,
+                                titelController.text.trim(),
+                              )
+                            : context.read<ProviderBookItems>().updateTitleItem(
+                                headerIndex,
+                                index,
+                                titelController.text.trim(),
+                              );
+                        serviceController.saveToDoList(context);
+                      }
+                    },
               icon: Icon(Icons.check),
             ),
             onTap: () => {},
@@ -104,19 +110,23 @@ class AppUserData extends StatelessWidget {
               maxLines: 4,
             ),
             trailing: IconButton(
-              onPressed: () {
-                isHeader
-                    ? context.read<ProviderBookItems>().updateDescription(
-                        index,
-                        descriptionController.text.trim(),
-                      )
-                    : context.read<ProviderBookItems>().updateDescriptionItem(
-                        headerIndex,
-                        index,
-                        descriptionController.text.trim(),
-                      );
-                serviceController.saveToDoList(context);
-              },
+              onPressed: isLocked
+                  ? null
+                  : () {
+                      isHeader
+                          ? context.read<ProviderBookItems>().updateDescription(
+                              index,
+                              descriptionController.text.trim(),
+                            )
+                          : context
+                                .read<ProviderBookItems>()
+                                .updateDescriptionItem(
+                                  headerIndex,
+                                  index,
+                                  descriptionController.text.trim(),
+                                );
+                      serviceController.saveToDoList(context);
+                    },
               icon: Icon(Icons.check),
             ),
             onTap: () => {},
@@ -137,21 +147,22 @@ class AppUserData extends StatelessWidget {
                     },
                   ),
             trailing: IconButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  isHeader
-                      ? /*context.read<ProviderBookItems>().updateDodCounter(
-                          index,
-                          dodCounterController.text.trim(),
-                        )*/ null
-                      : context.read<ProviderBookItems>().updateDodCounterItem(
-                          headerIndex,
-                          index,
-                          dodCounterController.text.trim(),
-                        );
-                  serviceController.saveToDoList(context);
-                }
-              },
+              onPressed: isLocked
+                  ? null
+                  : () {
+                      if (formKey.currentState!.validate()) {
+                        isHeader
+                            ? null
+                            : context
+                                  .read<ProviderBookItems>()
+                                  .updateDodCounterItem(
+                                    headerIndex,
+                                    index,
+                                    dodCounterController.text.trim(),
+                                  );
+                        serviceController.saveToDoList(context);
+                      }
+                    },
               icon: Icon(Icons.check),
             ),
             onTap: () => {},
@@ -172,29 +183,28 @@ class AppUserData extends StatelessWidget {
                     },
                   ),
             trailing: IconButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  isHeader
-                      ? /*context.read<ProviderBookItems>().updateDod(
-                          index,
-                          dodController.text.trim(),
-                        )*/ null
-                      : context.read<ProviderBookItems>().updateDodItem(
-                          headerIndex,
-                          index,
-                          dodController.text.trim(),
-                        );
-                  serviceController.saveToDoList(context);
-                }
-              },
+              onPressed: isLocked
+                  ? null
+                  : () {
+                      if (formKey.currentState!.validate()) {
+                        isHeader
+                            ? null
+                            : context.read<ProviderBookItems>().updateDodItem(
+                                headerIndex,
+                                index,
+                                dodController.text.trim(),
+                              );
+                        serviceController.saveToDoList(context);
+                      }
+                    },
               icon: Icon(Icons.check),
             ),
             onTap: () => {},
           ),
           ListTile(
             leading: Text("Priorität"),
-            title: DropdownMenu(
-              initialSelection: Priority.low,
+            title: DropdownMenu<Priority>(
+              initialSelection: listItem.priority,
               dropdownMenuEntries: [
                 for (var priorites in Priority.values)
                   DropdownMenuEntry(
@@ -202,19 +212,24 @@ class AppUserData extends StatelessWidget {
                     value: priorites,
                   ),
               ],
-              onSelected: (item) {
-                isHeader
-                    ? context.read<ProviderBookItems>().updatePriority(
-                        index,
-                        (item!),
-                      )
-                    : context.read<ProviderBookItems>().updatePriorityItem(
-                        headerIndex,
-                        index,
-                        (item!),
-                      );
-                serviceController.saveToDoList(context);
-              },
+              onSelected: isLocked
+                  ? null
+                  : (item) {
+                      if (item == null) return;
+                      isHeader
+                          ? context.read<ProviderBookItems>().updatePriority(
+                              index,
+                              item,
+                            )
+                          : context
+                                .read<ProviderBookItems>()
+                                .updatePriorityItem(
+                                  headerIndex,
+                                  index,
+                                  item,
+                                );
+                      serviceController.saveToDoList(context);
+                    },
             ),
           ),
           ListTile(
