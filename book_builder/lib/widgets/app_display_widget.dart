@@ -1,5 +1,5 @@
 import 'package:book_builder/providers/provider_service.dart';
-import 'package:book_builder/widgets/time/app_timewidget.dart';
+import 'package:book_builder/widgets/weather/weatherservice.dart';
 import 'package:flutter/material.dart';
 import 'package:postgrest/src/types.dart';
 import 'package:provider/provider.dart';
@@ -15,16 +15,33 @@ class AppDisplayWidget extends StatefulWidget {
 
 class _AppDisplayWidgetState extends State<AppDisplayWidget> {
   TextEditingController newName = TextEditingController();
+  final WeatherService _weatherService = WeatherService();
+  Map<String, dynamic>? _weatherData;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _fetchWeather();
   }
 
   @override
   void dispose() {
     newName.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchWeather() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _weatherService.fetchWeather('Berlin');
+      setState(() {
+        _weatherData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -87,8 +104,56 @@ class _AppDisplayWidgetState extends State<AppDisplayWidget> {
             ),
           ),
         ),
-        AppTimeWidget(),
+        _buildWeatherWidget(),
       ],
+    );
+  }
+
+  Widget _buildWeatherWidget() {
+    if (_isLoading) {
+      return const SizedBox(
+        width: 120,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_weatherData == null) {
+      return const SizedBox(
+        width: 120,
+        child: Text('Wetter nicht verfügbar'),
+      );
+    }
+
+    final cityName = _weatherData!['name'] ?? '';
+    final temp = _weatherData!['main']['temp'] ?? 0.0;
+    final iconCode = _weatherData!['weather'][0]['icon'] ?? '01d';
+    final iconUrl = 'https://openweathermap.org/img/wn/$iconCode@2x.png';
+
+    return Card(
+      child: SizedBox(
+        width: 120,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              cityName,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+            ),
+            Image.network(
+              iconUrl,
+              height: 40,
+              width: 40,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.cloud, size: 40),
+            ),
+            Text(
+              '${temp.toStringAsFixed(0)}°C',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
