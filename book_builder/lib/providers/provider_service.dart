@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:book_builder/main_app.dart';
@@ -11,10 +12,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ProviderService extends ChangeNotifier {
   static const _serviceKeys = 'serviceKeys';
   static const _themeKey = 'themeKey';
-  static const _offlineKey = 'offlineKey';
   static const _bookVaultKey = 'books';
   static const _headerKeyPrefix = 'hdr_';
   static const _subTopicKeyPrefix = 'sub_';
+  static const _lockKeyPrefix = 'lock_';
+  static const _maxModificationHistory = 32;
+  static const _lockTimeout = Duration(minutes: 5);
   bool _isDarkMode = true;
   bool get isDarkMode => _isDarkMode;
   bool _getUseOnlineDB = false;
@@ -41,6 +44,67 @@ class ProviderService extends ChangeNotifier {
   String _currentBook = 'Lorem Ipsum';
   String get currentBook => _currentBook;
   int currentBookId = 0;
+
+  // ── Lock management ──────────────────────────────────────────
+  final Map<int, Timer> _lockTimers = {};
+  final Map<int, String> _lockOwners = {};
+
+  Future<bool> acquireLock(int bookId) async {
+    if (_userId.isEmpty) return false;
+    if (_lockOwners[bookId] == _userId) {
+      _lockTimers[bookId]?.cancel();
+      _lockTimers[bookId] = Timer(_lockTimeout, () => releaseLock(bookId));
+      return true;
+    }
+    if (_lockOwners.containsKey(bookId)) return false;
+
+    try {
+      if (!_getUseOnlineDB) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('$_lockKeyPrefix$bookId', _userId);
+      } else {
+        await supabase
+            .from('books')
+            .update({'in_use_by': _userId})
+            .eq('id', bookId);
+      }
+      _lockOwners[bookId] = _userId;
+      _lockTimers[bookId] = Timer(_lockTimeout, () => releaseLock(bookId));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  Future<void> releaseLock(int bookId) async {
+    _lockTimers[bookId]?.cancel();
+    _lockTimers.remove(bookId);
+    _lockOwners.remove(bookId);
+    try {
+      if (!_getUseOnlineDB) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('$_lockKeyPrefix$bookId');
+      } else {
+        await supabase
+            .from('books')
+            .update({'in_use_by': null})
+            .eq('id', bookId);
+      }
+    } catch (error) {
+      debugPrint('releaseLock failed: $error');
+    }
+  }
+
+  bool hasLock(int bookId) => _lockOwners[bookId] == _userId;
+
+  Future<void> releaseAllLocks() async {
+    final bookIds = List<int>.from(
+      _lockOwners.keys.where((id) => _lockOwners[id] == _userId),
+    );
+    for (final bookId in bookIds) {
+      await releaseLock(bookId);
+    }
+  }
 
   // ── Key helpers ──────────────────────────────────────────────
 
@@ -73,6 +137,18 @@ class ProviderService extends ChangeNotifier {
     return -((maskedHeader << 32) | maskedSub);
   }
 
+  List<dynamic>? _appendToModificationList(
+    List<dynamic> currentList,
+    dynamic newEntry,
+  ) {
+    final list = List<dynamic>.from(currentList);
+    list.add(newEntry);
+    if (list.length > _maxModificationHistory) {
+      return null;
+    }
+    return list;
+  }
+
   Future<void> upsertBook(Map<String, dynamic> bookData) async {
     try {
       await supabase
@@ -88,8 +164,6 @@ class ProviderService extends ChangeNotifier {
   }
 
   // ── Incremental Save ─────────────────────────────────────────
-  /// Speichert nur die als "dirty" markierten Header und Sub-Topics.
-  /// Wenn keine dirty Items vorhanden sind, wird nichts gespeichert.
   void saveToDoList(BuildContext context) async {
     final todoManager = context.read<ProviderBookItems>();
     if (!todoManager.hasDirtyItems) return;
@@ -107,11 +181,40 @@ class ProviderService extends ChangeNotifier {
         if (!getUseOnlineDB) {
           await prefs.setString(headerKey, jsonEncode(headerMap));
         } else {
+          final now = DateTime.now().toIso8601String().split('T').first;
+          final bookId = header.id;
+
+          List<dynamic>? lastModifiedAt;
+          List<dynamic>? lastModifiedBy;
+          try {
+            final existing = await supabase
+                .from('books')
+                .select('last_modified_at, last_modified_by')
+                .eq('id', bookId)
+                .maybeSingle();
+            if (existing != null) {
+              lastModifiedAt = existing['last_modified_at'] as List<dynamic>?;
+              lastModifiedBy = existing['last_modified_by'] as List<dynamic>?;
+            }
+          } catch (_) {}
+
+          final updatedModifiedAt = _appendToModificationList(
+            lastModifiedAt ?? [],
+            now,
+          );
+          final updatedModifiedBy = _appendToModificationList(
+            lastModifiedBy ?? [],
+            _userId,
+          );
+
           await upsertBook({
-            'id': header.id,
+            'id': bookId,
             'titel': currentBook,
             'team': userGroup,
             'chapters': jsonEncode(headerMap),
+            'sub_chapters': null,
+            'last_modified_at': updatedModifiedAt,
+            'last_modified_by': updatedModifiedBy,
           });
         }
 
@@ -154,11 +257,40 @@ class ProviderService extends ChangeNotifier {
         if (!getUseOnlineDB) {
           await prefs.setString(subTopicKey, jsonEncode(subMap));
         } else {
+          final bookId = _subTopicDbId(headerId, subTopic.id);
+
+          List<dynamic>? lastModifiedAt;
+          List<dynamic>? lastModifiedBy;
+          try {
+            final existing = await supabase
+                .from('books')
+                .select('last_modified_at, last_modified_by')
+                .eq('id', bookId)
+                .maybeSingle();
+            if (existing != null) {
+              lastModifiedAt = existing['last_modified_at'] as List<dynamic>?;
+              lastModifiedBy = existing['last_modified_by'] as List<dynamic>?;
+            }
+          } catch (_) {}
+
+          final now = DateTime.now().toIso8601String().split('T').first;
+          final updatedModifiedAt = _appendToModificationList(
+            lastModifiedAt ?? [],
+            now,
+          );
+          final updatedModifiedBy = _appendToModificationList(
+            lastModifiedBy ?? [],
+            _userId,
+          );
+
           await upsertBook({
-            'id': _subTopicDbId(headerId, subTopic.id),
+            'id': bookId,
             'titel': currentBook,
             'team': userGroup,
-            'chapters': jsonEncode(subMap),
+            'chapters': jsonEncode(headerId),
+            'sub_chapters': jsonEncode(subMap),
+            'last_modified_at': updatedModifiedAt,
+            'last_modified_by': updatedModifiedBy,
           });
         }
 
@@ -167,10 +299,7 @@ class ProviderService extends ChangeNotifier {
         }
       }
 
-      // KeyRing persistent speichern
       await prefs.setString(_serviceKeys, _keyRing.join(" "));
-
-      // Dirty-Flags zurücksetzen
       todoManager.clearDirtyFlags();
     } catch (error) {
       debugPrint('saveToDoList fehlgeschlagen: $error');
@@ -307,50 +436,60 @@ class ProviderService extends ChangeNotifier {
           _bookdata = await getAllBooks();
 
           if (_bookdata.isNotEmpty) {
-            final headerRows = <Map<String, dynamic>>[];
-            final subTopicRows = <Map<String, dynamic>>[];
-
+            // First pass: load all headers
             for (var item in _bookdata) {
-              final id = item['id'] as int? ?? 0;
-              if (id >= 0) {
-                headerRows.add(item);
-              } else {
-                subTopicRows.add(item);
-              }
-            }
-
-            for (var item in headerRows) {
               try {
-                final chaptersJson = item['chapters'];
-                if (chaptersJson == null) continue;
-                final Map<String, dynamic> headerMap =
-                    jsonDecode(chaptersJson as String) as Map<String, dynamic>;
-                final headerItem = ObjBookHeader.fromMapWithDefaults(headerMap);
-                todoManager.addHeader(headerItem);
+                final chaptersData = item['chapters'];
+                if (chaptersData == null) continue;
+
+                final decoded = jsonDecode(chaptersData as String);
+                if (decoded is Map<String, dynamic>) {
+                  final headerItem = ObjBookHeader.fromMapWithDefaults(decoded);
+                  todoManager.addHeader(headerItem);
+                }
               } catch (e) {
                 debugPrint('Fehler beim Laden eines Headers aus DB: $e');
               }
             }
 
-            for (var item in subTopicRows) {
+            // Sort headers by creation timestamp to ensure correct order
+            todoManager.headerList.sort(
+              (a, b) => a.createdAt.compareTo(b.createdAt),
+            );
+
+            // Second pass: load all sub-topics (headers now guaranteed to exist)
+            for (var item in _bookdata) {
               try {
-                final chaptersJson = item['chapters'];
-                if (chaptersJson == null) continue;
-                final Map<String, dynamic> subMap =
-                    jsonDecode(chaptersJson as String) as Map<String, dynamic>;
-                final subItem = ObjBookItem.fromMapWithDefaults(subMap);
-                final dbId = item['id'] as int? ?? 0;
-                final parentId = _headerIdFromDbId(dbId);
-                try {
-                  final parent = todoManager.getHeaderId(parentId);
-                  parent.subTopics.add(subItem);
-                } catch (_) {
-                  // Header not found – skip orphaned sub-topic
+                final chaptersData = item['chapters'];
+                if (chaptersData == null) continue;
+
+                final decoded = jsonDecode(chaptersData as String);
+                if (decoded is num) {
+                  final headerId = decoded.toInt();
+                  final subChapters = item['sub_chapters'];
+                  if (subChapters == null) continue;
+                  final subMap =
+                      jsonDecode(subChapters as String) as Map<String, dynamic>;
+                  final subItem = ObjBookItem.fromMapWithDefaults(subMap);
+                  try {
+                    final parent = todoManager.getHeaderId(headerId);
+                    final exists = parent.subTopics.any(
+                      (s) => s.id == subItem.id,
+                    );
+                    if (!exists) {
+                      parent.subTopics.add(subItem);
+                    }
+                  } catch (_) {
+                    debugPrint(
+                      'Fehler: Header $headerId nicht gefunden für Sub-Topic',
+                    );
+                  }
                 }
               } catch (e) {
                 debugPrint('Fehler beim Laden eines Sub-Topics aus DB: $e');
               }
             }
+
             todoManager.notifyListeners();
 
             _keyRing.clear();
@@ -435,7 +574,8 @@ class ProviderService extends ChangeNotifier {
       final books = await supabase
           .from('books')
           .select()
-          .eq('titel', currentBook);
+          .eq('titel', currentBook)
+          .order('created_at', ascending: true);
       return books;
     } catch (error) {
       debugPrint('Konnte Bücher nicht laden: $error');
@@ -511,6 +651,7 @@ class ProviderService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _keyRing.clear();
+      await releaseAllLocks();
       await prefs.clear();
     } catch (error) {
       debugPrint('resetAllSettings fehlgeschlagen: $error');
