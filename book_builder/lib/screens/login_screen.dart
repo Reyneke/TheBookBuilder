@@ -63,11 +63,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-async function void signInWithDiscord() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'discord',
-  })
-}
+  Future<void> signInWithDiscord() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      await context.read<ProviderService>().supabase.auth.signInWithOAuth(
+        OAuthProvider.discord,
+      );
+    } on AuthException catch (error) {
+      if (mounted) context.showSnackBar(error.message, isError: true);
+    } catch (error) {
+      if (mounted) {
+        context.showSnackBar('Unexpected error occurred', isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   /* Site:--
 fcce8250-ad2c-488a-b59a-c7263e62a634
@@ -77,41 +94,42 @@ cloudflare site: 0x4AAAAAADiJzHJOzaHwl_39
 cloduflare key: 0x4AAAAAADiJzJdDkYF08ILzcU63S74o9W4
 */
 
-  Future<void> _signUpWithEmail(/*String email, String password*/) async {
-    //Map? captchaDetails;
+  Future<void> _signUpWithEmail() async {
     if (_formKey.currentState!.validate()) {
-      /*try {
-        captchaDetails = await HCaptcha.show(context);
-      } catch (e) {
-        if (mounted) {
-          context.showSnackBar("Fehler: $e", isError: true);
-        }
-      }*/
-
-      // validated
-      //if (captchaToken != null) {
-      // now use captchaDetails['code']
       final userPassword = _passwordController.text.trim();
       List<int> bytes = utf8.encode(userPassword);
       Digest sha256Hash = sha256.convert(bytes);
       try {
+        setState(() {
+          _isLoading = true;
+        });
         await context.read<ProviderService>().supabase.auth.signUp(
           email: _emailController.text.trim(),
-          password: sha256Hash.toString(), //_passwordController.text.trim(),
-          //captchaToken: captchaToken,
+          password: sha256Hash.toString(),
         );
         if (mounted) {
           context.showSnackBar(
             "Registrierung erfolgreich! Bestätigungs-E-Mail wurde gesendet.",
             isError: false,
           );
+          _emailController.clear();
+          _passwordController.clear();
         }
       } on AuthException catch (e) {
         if (mounted) {
           context.showSnackBar("Fehler: ${e.message}", isError: true);
         }
+      } catch (error) {
+        if (mounted) {
+          context.showSnackBar('Unexpected error occurred', isError: true);
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-      //}
     }
   }
 
@@ -169,11 +187,30 @@ cloduflare key: 0x4AAAAAADiJzJdDkYF08ILzcU63S74o9W4
         .auth
         .onAuthStateChange
         .listen(
-          (data) {
+          (data) async {
             if (_redirecting) return;
             final session = data.session;
             if (session != null) {
               _redirecting = true;
+
+              // Check if user is enabled
+              final isEnabled = await context
+                  .read<ProviderService>()
+                  .checkUserEnabled(session.user.id);
+
+              if (!isEnabled) {
+                // User is not enabled, sign out and show warning
+                await context.read<ProviderService>().supabase.auth.signOut();
+                if (mounted) {
+                  context.showSnackBar(
+                    'Ihr Account ist nicht aktiviert. Bitte kontaktieren Sie einen Administrator.',
+                    isError: true,
+                  );
+                }
+                _redirecting = false;
+                return;
+              }
+
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => MainApp()),
               );
@@ -274,7 +311,21 @@ cloduflare key: 0x4AAAAAADiJzJdDkYF08ILzcU63S74o9W4
                 onPressed: _isLoading ? null : _registerUser,
                 child: Text(_isLoading ? 'Erstelle...' : 'Link versenden'),
               ),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _signUpWithEmail,
+                child: Text(_isLoading ? 'Registriere...' : 'Registrieren'),
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : signInWithDiscord,
+            icon: const Icon(Icons.discord),
+            label: const Text('Mit Discord einloggen'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),

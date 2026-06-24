@@ -749,4 +749,22 @@ class ProviderService extends ChangeNotifier {
     }
     return null;
   }
+
+  Future<bool> checkUserEnabled(String userId) async {
+    try {
+      final result = await supabase
+          .from('profiles')
+          .select('is_enabled')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (result != null) {
+        return result['is_enabled'] as bool? ?? false;
+      }
+      return false;
+    } catch (error) {
+      debugPrint('checkUserEnabled fehlgeschlagen: $error');
+      return false;
+    }
+  }
 }
