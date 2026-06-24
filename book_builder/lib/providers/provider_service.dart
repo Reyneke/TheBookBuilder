@@ -34,6 +34,8 @@ class ProviderService extends ChangeNotifier {
   String get userGroup => _userGroup;
   bool _isUserValidated = false;
   bool get isUserValidated => _isUserValidated;
+  bool _isCheckingUserValidation = false;
+  bool get isCheckingUserValidation => _isCheckingUserValidation;
   String _userId = "";
   String get userId => _userId;
   Map<String, dynamic> _userdata = {};
@@ -711,14 +713,19 @@ class ProviderService extends ChangeNotifier {
   Future<Object?> updateUserData() async {
     if (supabase.auth.currentSession != null) {
       try {
+        _isCheckingUserValidation = true;
+        notifyListeners();
         _userId = supabase.auth.currentSession!.user.id;
         _userdata = await supabase
             .from('profiles')
             .select()
             .eq('id', userId)
             .single();
+        _isCheckingUserValidation = false;
         notifyListeners();
       } catch (error) {
+        _isCheckingUserValidation = false;
+        notifyListeners();
         debugPrint('updateUserData fehlgeschlagen: $error');
         return error;
       }

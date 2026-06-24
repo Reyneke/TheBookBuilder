@@ -19,6 +19,7 @@ class ObjBookItem {
   int headerId;
   int bookDod = 4500;
   int bookCounter = 0;
+  String responsibleUser = "";
 
   ObjBookItem({
     required this.id,
