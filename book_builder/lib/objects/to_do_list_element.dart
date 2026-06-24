@@ -65,9 +65,19 @@ class ToDoListElement extends StatelessWidget {
               "${listItem.title} - ${listItem.bookCounter} / ${listItem.bookDod}",
               style: AppTheme.baseTextTheme.headlineSmall,
             )
-          : Text(
-              "${listItem.title} - ${listItem.bookCounter} / ${listItem.bookDod}",
-              style: AppTheme.baseTextTheme.bodyLarge,
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              spacing: 24,
+              children: [
+                Text(
+                  "${listItem.title} - ${listItem.bookCounter} / ${listItem.bookDod}",
+                  style: AppTheme.baseTextTheme.bodyLarge,
+                ),
+                Text(
+                  "Verantwortlich: ${listItem.responsibleUser}",
+                  style: AppTheme.baseTextTheme.bodyLarge,
+                ),
+              ],
             ),
       subtitle: ToDoPriorityIndicator(priority: listItem.priority),
       trailing: Consumer<ProviderBookItems>(

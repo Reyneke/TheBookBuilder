@@ -1,4 +1,5 @@
 import 'package:book_builder/providers/provider_service.dart';
+import 'package:book_builder/theme/app_theme.dart';
 import 'package:book_builder/widgets/weather/weatherservice.dart';
 import 'package:flutter/material.dart';
 import 'package:postgrest/src/types.dart';
@@ -52,11 +53,20 @@ class _AppDisplayWidgetState extends State<AppDisplayWidget> {
       children: [
         Consumer<ProviderService>(
           builder: (context, serviceManager, child) {
-            return Switch(
-              value: serviceManager.getUseOnlineDB,
-              onChanged: (bool newStatus) {
-                serviceManager.toggleOnlineOffline(newStatus, context);
-              },
+            return Row(
+              spacing: 8,
+              children: [
+                Text(
+                  "Toggle: Offline / Online",
+                  style: AppTheme.baseTextTheme.bodyLarge,
+                ),
+                Switch(
+                  value: serviceManager.getUseOnlineDB,
+                  onChanged: (bool newStatus) {
+                    serviceManager.toggleOnlineOffline(newStatus, context);
+                  },
+                ),
+              ],
             );
           },
         ),

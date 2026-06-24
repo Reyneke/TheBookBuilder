@@ -33,6 +33,7 @@ class ObjBookItem {
     required this.headerId,
     required this.bookDod,
     required this.bookCounter,
+    this.responsibleUser = "",
   });
 
   Map<String, dynamic> toMap() {
@@ -50,6 +51,7 @@ class ObjBookItem {
       'headerId': headerId,
       'bookDod': bookDod,
       'bookCounter': bookCounter,
+      'responsibleUser': responsibleUser,
     };
   }
 
@@ -115,6 +117,7 @@ class ObjBookItem {
         headerId: map['headerId'] != null ? map['headerId'] as int : 0,
         bookDod: map['bookDod'] != null ? map['bookDod'] as int : 0,
         bookCounter: map['bookCounter'] != null ? map['bookCounter'] as int : 0,
+        responsibleUser: map['responsibleUser'] as String? ?? '',
       );
     } catch (e) {
       throw FormatException('Fehler beim Parsen des Todo-Objekts: $e');
@@ -137,6 +140,7 @@ class ObjBookHeader extends ObjBookItem {
     required super.headerId,
     required super.bookDod,
     required super.bookCounter,
+    super.responsibleUser = "",
     required this.subTopics,
   });
 
@@ -228,6 +232,7 @@ class ObjBookHeader extends ObjBookItem {
         headerId: map['headerId'] != null ? map['headerId'] as int : 0,
         bookDod: map['bookDod'] != null ? map['bookDod'] as int : 0,
         bookCounter: map['bookCounter'] != null ? map['bookCounter'] as int : 0,
+        responsibleUser: map['responsibleUser'] as String? ?? '',
         subTopics: parsedSubTopics,
       );
     } catch (e) {

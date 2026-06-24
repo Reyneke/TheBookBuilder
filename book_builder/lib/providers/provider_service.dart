@@ -585,6 +585,23 @@ class ProviderService extends ChangeNotifier {
     }
   }
 
+  Future<List<String>> getAllUsers() async {
+    try {
+      final users = await supabase
+          .from('profiles')
+          .select('username')
+          .order('username', ascending: true);
+
+      return users
+          .map((user) => user['username'] as String)
+          .where((username) => username.isNotEmpty)
+          .toList();
+    } catch (error) {
+      debugPrint('Konnte Benutzer nicht laden: $error');
+      return [];
+    }
+  }
+
   Future<PostgrestList?> getBookTitles(BuildContext context) async {
     try {
       final books = await supabase
