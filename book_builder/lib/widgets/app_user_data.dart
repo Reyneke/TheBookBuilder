@@ -5,7 +5,7 @@ import 'package:book_builder/screens/to_do_date_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class AppUserData extends StatelessWidget {
+class AppUserData extends StatefulWidget {
   const AppUserData({
     super.key,
     required this.formKey,
@@ -30,18 +30,63 @@ class AppUserData extends StatelessWidget {
   final bool isLocked;
 
   @override
+  State<AppUserData> createState() => _AppUserDataState();
+}
+
+class _AppUserDataState extends State<AppUserData> {
+  List<String> _users = [];
+  bool _isLoadingUsers = true;
+  String? _selectedUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedUser = widget.listItem.responsibleUser.isEmpty
+        ? null
+        : widget.listItem.responsibleUser;
+    _loadUsers();
+  }
+
+  @override
+  void didUpdateWidget(AppUserData oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listItem != widget.listItem) {
+      _selectedUser = widget.listItem.responsibleUser.isEmpty
+          ? null
+          : widget.listItem.responsibleUser;
+    }
+  }
+
+  Future<void> _loadUsers() async {
+    if (!widget.serviceController.getUseOnlineDB) {
+      setState(() {
+        _isLoadingUsers = false;
+      });
+      return;
+    }
+
+    final users = await widget.serviceController.getAllUsers();
+    if (mounted) {
+      setState(() {
+        _users = users;
+        _isLoadingUsers = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     TextEditingController dodController = TextEditingController();
     TextEditingController dodCounterController = TextEditingController();
-    if (isHeader) {
+    if (widget.isHeader) {
       dodController.text = context
           .read<ProviderBookItems>()
-          .getHeaderId(index)
+          .getHeaderId(widget.index)
           .bookDod
           .toString();
       dodCounterController.text = context
           .read<ProviderBookItems>()
-          .getHeaderId(index)
+          .getHeaderId(widget.index)
           .bookCounter
           .toString();
     } else {
@@ -49,29 +94,29 @@ class AppUserData extends StatelessWidget {
       dodController.text = context
           .read<ProviderBookItems>()
           .getBookId(
-            index,
-            context.read<ProviderBookItems>().getHeaderId(headerIndex),
+            widget.index,
+            context.read<ProviderBookItems>().getHeaderId(widget.headerIndex),
           )
           .bookDod
           .toString();
       dodCounterController.text = context
           .read<ProviderBookItems>()
           .getBookId(
-            index,
-            context.read<ProviderBookItems>().getHeaderId(headerIndex),
+            widget.index,
+            context.read<ProviderBookItems>().getHeaderId(widget.headerIndex),
           )
           .bookCounter
           .toString();
     }
 
     return Form(
-      key: formKey,
+      key: widget.formKey,
       child: Wrap(
         children: <Widget>[
           ListTile(
-            leading: Text("Titel"),
+            leading: const Text("Titel"),
             title: TextFormField(
-              controller: titelController,
+              controller: widget.titelController,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Bitte gib einen Titel ein';
@@ -80,62 +125,62 @@ class AppUserData extends StatelessWidget {
               },
             ),
             trailing: IconButton(
-              onPressed: isLocked
+              onPressed: widget.isLocked
                   ? null
                   : () {
-                      if (formKey.currentState!.validate()) {
-                        isHeader
+                      if (widget.formKey.currentState!.validate()) {
+                        widget.isHeader
                             ? context.read<ProviderBookItems>().updateTitle(
-                                index,
-                                titelController.text.trim(),
+                                widget.index,
+                                widget.titelController.text.trim(),
                               )
                             : context.read<ProviderBookItems>().updateTitleItem(
-                                headerIndex,
-                                index,
-                                titelController.text.trim(),
+                                widget.headerIndex,
+                                widget.index,
+                                widget.titelController.text.trim(),
                               );
-                        serviceController.saveToDoList(context);
+                        widget.serviceController.saveToDoList(context);
                       }
                     },
-              icon: Icon(Icons.check),
+              icon: const Icon(Icons.check),
             ),
             onTap: () => {},
           ),
           ListTile(
-            leading: Text(
+            leading: const Text(
               "Beschreibung",
             ),
             title: TextFormField(
-              controller: descriptionController,
+              controller: widget.descriptionController,
               maxLines: 4,
             ),
             trailing: IconButton(
-              onPressed: isLocked
+              onPressed: widget.isLocked
                   ? null
                   : () {
-                      isHeader
+                      widget.isHeader
                           ? context.read<ProviderBookItems>().updateDescription(
-                              index,
-                              descriptionController.text.trim(),
+                              widget.index,
+                              widget.descriptionController.text.trim(),
                             )
                           : context
                                 .read<ProviderBookItems>()
                                 .updateDescriptionItem(
-                                  headerIndex,
-                                  index,
-                                  descriptionController.text.trim(),
+                                  widget.headerIndex,
+                                  widget.index,
+                                  widget.descriptionController.text.trim(),
                                 );
-                      serviceController.saveToDoList(context);
+                      widget.serviceController.saveToDoList(context);
                     },
-              icon: Icon(Icons.check),
+              icon: const Icon(Icons.check),
             ),
             onTap: () => {},
           ),
           ListTile(
-            leading: Text("Aktuelle Wörter"),
-            title: isHeader
+            leading: const Text("Aktuelle Wörter"),
+            title: widget.isHeader
                 ? Text(
-                    "${context.read<ProviderBookItems>().getHeaderId(index).bookCounter}",
+                    "${context.read<ProviderBookItems>().getHeaderId(widget.index).bookCounter}",
                   )
                 : TextFormField(
                     controller: dodCounterController,
@@ -147,31 +192,31 @@ class AppUserData extends StatelessWidget {
                     },
                   ),
             trailing: IconButton(
-              onPressed: isLocked
+              onPressed: widget.isLocked
                   ? null
                   : () {
-                      if (formKey.currentState!.validate()) {
-                        isHeader
+                      if (widget.formKey.currentState!.validate()) {
+                        widget.isHeader
                             ? null
                             : context
                                   .read<ProviderBookItems>()
                                   .updateDodCounterItem(
-                                    headerIndex,
-                                    index,
+                                    widget.headerIndex,
+                                    widget.index,
                                     dodCounterController.text.trim(),
                                   );
-                        serviceController.saveToDoList(context);
+                        widget.serviceController.saveToDoList(context);
                       }
                     },
-              icon: Icon(Icons.check),
+              icon: const Icon(Icons.check),
             ),
             onTap: () => {},
           ),
           ListTile(
-            leading: Text("Benötigte Wörter"),
-            title: isHeader
+            leading: const Text("Benötigte Wörter"),
+            title: widget.isHeader
                 ? Text(
-                    "${context.read<ProviderBookItems>().getHeaderId(index).bookDod}",
+                    "${context.read<ProviderBookItems>().getHeaderId(widget.index).bookDod}",
                   )
                 : TextFormField(
                     controller: dodController,
@@ -183,28 +228,28 @@ class AppUserData extends StatelessWidget {
                     },
                   ),
             trailing: IconButton(
-              onPressed: isLocked
+              onPressed: widget.isLocked
                   ? null
                   : () {
-                      if (formKey.currentState!.validate()) {
-                        isHeader
+                      if (widget.formKey.currentState!.validate()) {
+                        widget.isHeader
                             ? null
                             : context.read<ProviderBookItems>().updateDodItem(
-                                headerIndex,
-                                index,
+                                widget.headerIndex,
+                                widget.index,
                                 dodController.text.trim(),
                               );
-                        serviceController.saveToDoList(context);
+                        widget.serviceController.saveToDoList(context);
                       }
                     },
-              icon: Icon(Icons.check),
+              icon: const Icon(Icons.check),
             ),
             onTap: () => {},
           ),
           ListTile(
-            leading: Text("Priorität"),
+            leading: const Text("Priorität"),
             title: DropdownMenu<Priority>(
-              initialSelection: listItem.priority,
+              initialSelection: widget.listItem.priority,
               dropdownMenuEntries: [
                 for (var priorites in Priority.values)
                   DropdownMenuEntry(
@@ -212,34 +257,70 @@ class AppUserData extends StatelessWidget {
                     value: priorites,
                   ),
               ],
-              onSelected: isLocked
+              onSelected: widget.isLocked
                   ? null
                   : (item) {
                       if (item == null) return;
-                      isHeader
+                      widget.isHeader
                           ? context.read<ProviderBookItems>().updatePriority(
-                              index,
+                              widget.index,
                               item,
                             )
                           : context
                                 .read<ProviderBookItems>()
                                 .updatePriorityItem(
-                                  headerIndex,
-                                  index,
+                                  widget.headerIndex,
+                                  widget.index,
                                   item,
                                 );
-                      serviceController.saveToDoList(context);
+                      widget.serviceController.saveToDoList(context);
                     },
             ),
           ),
           ListTile(
-            leading: Text("Fällig am"),
+            leading: const Text("Fällig am"),
             title: ToDoDatePicker(
-              index: index,
-              isHeader: isHeader,
-              indexHeader: headerIndex,
+              index: widget.index,
+              isHeader: widget.isHeader,
+              indexHeader: widget.headerIndex,
             ),
           ),
+          if (!widget.isHeader)
+            ListTile(
+              leading: const Text("Verantwortlicher"),
+              title: _isLoadingUsers
+                  ? const CircularProgressIndicator()
+                  : DropdownButton<String>(
+                      value: _selectedUser,
+                      hint: const Text('Benutzer auswählen'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: '',
+                          child: Text('Keiner'),
+                        ),
+                        for (final user in _users)
+                          DropdownMenuItem<String>(
+                            value: user,
+                            child: Text(user),
+                          ),
+                      ],
+                      onChanged: widget.isLocked
+                          ? null
+                          : (newUser) {
+                              setState(() {
+                                _selectedUser = newUser;
+                              });
+                              context
+                                  .read<ProviderBookItems>()
+                                  .updateResponsibleUser(
+                                    widget.headerIndex,
+                                    widget.index,
+                                    newUser ?? '',
+                                  );
+                              widget.serviceController.saveToDoList(context);
+                            },
+                    ),
+            ),
         ],
       ),
     );

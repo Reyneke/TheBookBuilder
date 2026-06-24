@@ -299,6 +299,18 @@ class ProviderBookItems extends ChangeNotifier {
     }
   }
 
+  void updateResponsibleUser(int headerId, int id, String newUser) {
+    try {
+      getBookId(id, getHeaderId(headerId)).responsibleUser = newUser;
+      markSubTopicDirty(headerId, id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'updateResponsibleUser fehlgeschlagen für headerId $headerId, id $id: $e',
+      );
+    }
+  }
+
   void updateCompletionDate(int id, DateTime newDate) {
     try {
       getHeaderId(id).dueDate = newDate;

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '/env_files/api_key.dart'; // Deine ausgelagerte API-Datei
+import '/.env_files/api_key.dart'; // Deine ausgelagerte API-Datei
 
 class WeatherService {
   // Basis-URL für aktuelle Wetterdaten (metrische Einheiten = Celsius)

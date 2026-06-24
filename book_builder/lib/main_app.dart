@@ -38,7 +38,8 @@ class _MainAppState extends State<MainApp> {
         : false;
     bool getShowSetupScreen =
         (((context.read<ProviderService>().getUseOnlineDB) &&
-                (!context.read<ProviderService>().isUserValidated)) ||
+                (!context.read<ProviderService>().isUserValidated) &&
+                (!context.read<ProviderService>().isCheckingUserValidation)) ||
             (context.read<ProviderService>().getUserSetup))
         ? true
         : false;

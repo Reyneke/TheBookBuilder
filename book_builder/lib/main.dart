@@ -10,7 +10,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '/env_files/supabase_key.dart';
+import '/.env_files/supabase_key.dart';
 
 void main() async {
   if (kIsWeb) {

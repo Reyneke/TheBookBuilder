@@ -1,0 +1,3 @@
+1. Make sure that the variable "responsibleUser" found in "obj_book_item.dart" is correctly mapped.
+2. Make sure, that the variable is correctly integrated into "to_do_list_element.dart"
+3. Create a function, which gets a list of all users able to access and work on the book. Then create a dropdownmenu in the "AppUserData" Widget, which allows users to assign themselves to a Subtopic. Make sure only Subtopics can be assigned.

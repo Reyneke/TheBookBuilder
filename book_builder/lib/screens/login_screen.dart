@@ -63,6 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+async function void signInWithDiscord() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'discord',
+  })
+}
+
   /* Site:--
 fcce8250-ad2c-488a-b59a-c7263e62a634
 Secret: ES_5dbc3e7f0c294bdd8e4d56e95e0bb074 
